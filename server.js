@@ -29,7 +29,7 @@ let gameState = {
 };
 
 // Game constants
-const PIPE_SPAWN_INTERVAL = 120; // frames
+const PIPE_SPAWN_INTERVAL = 90; // frames (every 1.5 seconds at 60fps)
 const PIPE_SPEED = 3;
 const PIPE_WIDTH = 60;
 const PIPE_GAP = 150;
@@ -49,6 +49,8 @@ function updatePipes() {
   // Only update pipes if at least one player has started
   if (!anyPlayerStarted) {
     gameState.gameStarted = false;
+    gameState.pipes = [];
+    gameState.frameCount = 0;
     return;
   }
 
@@ -58,10 +60,6 @@ function updatePipes() {
     gameState.pipes = [];
   }
 
-  const now = Date.now();
-  const deltaTime = now - gameState.lastUpdate;
-  gameState.lastUpdate = now;
-
   // Spawn new pipes
   gameState.frameCount++;
   if (gameState.frameCount % PIPE_SPAWN_INTERVAL === 0) {
@@ -70,8 +68,7 @@ function updatePipes() {
       id: generateId(),
       x: CANVAS_WIDTH,
       topHeight: pipeHeight,
-      bottomY: pipeHeight + PIPE_GAP,
-      passed: false
+      bottomY: pipeHeight + PIPE_GAP
     });
   }
 
@@ -83,16 +80,20 @@ function updatePipes() {
 }
 
 // Game loop - runs on server to keep pipes synchronized
+let lastBroadcast = Date.now();
 setInterval(() => {
   updatePipes();
   
-  // Broadcast pipe state to all clients
-  broadcast({
-    type: 'pipeUpdate',
-    pipes: gameState.pipes,
-    frameCount: gameState.frameCount
-  });
-}, 1000 / 60); // 60 FPS
+  // Only broadcast every 16ms (60fps) to reduce load
+  const now = Date.now();
+  if (now - lastBroadcast >= 16) {
+    lastBroadcast = now;
+    broadcast({
+      type: 'pipeUpdate',
+      pipes: gameState.pipes
+    });
+  }
+}, 16); // ~60 FPS
 
 wss.on('connection', (ws) => {
   console.log('New client connected');
@@ -123,13 +124,12 @@ wss.on('connection', (ws) => {
             type: 'init',
             playerId: playerId,
             players: Array.from(players.values()),
-            pipes: gameState.pipes,
-            frameCount: gameState.frameCount
+            pipes: gameState.pipes
           }));
 
           // Notify all other players about new player
           broadcast({
-            type: 'playerUpdate',
+            type: 'playerJoined',
             player: newPlayer
           }, ws);
 
@@ -145,11 +145,35 @@ wss.on('connection', (ws) => {
             player.isAlive = data.isAlive;
             player.hasStarted = data.hasStarted;
 
-            // Broadcast update to all other players
+            // Only broadcast player updates every few frames to reduce traffic
+            if (Math.random() < 0.3) { // 30% of updates get broadcast
+              broadcast({
+                type: 'playerUpdate',
+                player: {
+                  id: player.id,
+                  username: player.username,
+                  y: player.y,
+                  score: player.score,
+                  isAlive: player.isAlive,
+                  hasStarted: player.hasStarted
+                }
+              }, ws);
+            }
+          }
+          break;
+
+        case 'scoreUpdate':
+          // Dedicated score update (more reliable)
+          if (playerId && players.has(playerId)) {
+            const player = players.get(playerId);
+            player.score = data.score;
+            
+            // Broadcast score update to everyone
             broadcast({
-              type: 'playerUpdate',
-              player: player
-            }, ws);
+              type: 'scoreUpdate',
+              playerId: playerId,
+              score: data.score
+            });
           }
           break;
 
@@ -200,7 +224,7 @@ function broadcast(data, excludeWs = null) {
 
 // Generate unique ID
 function generateId() {
-  return Math.random().toString(36).substr(2, 9);
+  return Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
 }
 
 console.log('WebSocket server is ready for connections');
