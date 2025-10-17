@@ -19,12 +19,6 @@
             align-items: center;
             overflow: hidden;
         }
-        #gameWrapper {
-            display: none;
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-        }
         #menu {
             background: white;
             padding: 40px;
@@ -73,15 +67,29 @@
             color: #4a5568;
             font-size: 14px;
         }
-        #gameContainer {
+        #gameWrapper {
             display: none;
-            flex-direction: column;
+            position: fixed;
+            width: 100vw;
+            height: 100vh;
+            top: 0;
+            left: 0;
+        }
+        #gameContainer {
+            display: flex;
+            justify-content: center;
             align-items: center;
+            height: 100%;
+            position: relative;
         }
         #gameInfo {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
             display: flex;
             gap: 20px;
-            margin-bottom: 20px;
+            z-index: 10;
         }
         .info-box {
             background: white;
@@ -94,22 +102,34 @@
             border-radius: 10px;
             cursor: pointer;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: block;
         }
         #gameOver {
             display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             background: white;
-            padding: 30px;
-            border-radius: 10px;
+            padding: 40px 60px;
+            border-radius: 15px;
             text-align: center;
-            margin-top: 20px;
+            z-index: 100;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
         }
         #playerList {
-            background: white;
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.95);
             padding: 20px;
             border-radius: 10px;
-            margin-top: 20px;
-            max-width: 400px;
-            width: 90%;
+            max-width: 250px;
+            width: 250px;
+            max-height: 500px;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
         .player-item {
             display: flex;
@@ -120,6 +140,26 @@
         .player-you {
             font-weight: bold;
             color: #e53e3e;
+        }
+        #startPrompt {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255,255,255,0.95);
+            padding: 30px 50px;
+            border-radius: 15px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #2b6cb0;
+            z-index: 50;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.05); }
         }
     </style>
 </head>
@@ -138,24 +178,31 @@
         </div>
     </div>
 
-    <div id="gameContainer">
-        <div id="gameInfo">
-            <div class="info-box">
-                <span id="playerCount">0</span> Players Online
+    <div id="gameWrapper">
+        <div id="gameContainer">
+            <div id="gameInfo">
+                <div class="info-box">
+                    <span id="playerCount">0</span> Players Online
+                </div>
+                <div class="info-box">
+                    Score: <span id="score">0</span>
+                </div>
             </div>
-            <div class="info-box">
-                Score: <span id="score">0</span>
+            
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+            
+            <div id="startPrompt">Press SPACE to Start!</div>
+            
+            <div id="gameOver">
+                <h2 style="margin-bottom: 15px; font-size: 32px;">Game Over!</h2>
+                <p style="font-size: 24px; margin: 20px 0;">Final Score: <span id="finalScore">0</span></p>
+                <button onclick="restartGame()">Play Again</button>
             </div>
-        </div>
-        <canvas id="gameCanvas" width="800" height="600"></canvas>
-        <div id="gameOver">
-            <h2>Game Over!</h2>
-            <p style="font-size: 20px; margin: 20px 0;">Final Score: <span id="finalScore">0</span></p>
-            <button onclick="restartGame()">Play Again</button>
-        </div>
-        <div id="playerList">
-            <h3>Players Online</h3>
-            <div id="playersContainer"></div>
+            
+            <div id="playerList">
+                <h3 style="margin-bottom: 15px;">Players Online</h3>
+                <div id="playersContainer"></div>
+            </div>
         </div>
     </div>
 
@@ -164,18 +211,16 @@
         let username;
         let canvas, ctx;
         let gameLoop;
-        let player = { y: 250, velocity: 0, isAlive: true };
+        let player = { y: 250, velocity: 0, isAlive: true, hasStarted: false };
         let pipes = [];
-        let frameCount = 0;
         let score = 0;
         let players = [];
         let isGameOver = false;
+        let myPlayerId = null;
 
         const GRAVITY = 0.5;
         const JUMP_STRENGTH = -8;
         const BIRD_SIZE = 30;
-        const PIPE_WIDTH = 60;
-        const PIPE_GAP = 150;
 
         function startGame() {
             username = document.getElementById('usernameInput').value.trim();
@@ -185,12 +230,11 @@
             }
 
             document.getElementById('menu').style.display = 'none';
-            document.getElementById('gameContainer').style.display = 'flex';
+            document.getElementById('gameWrapper').style.display = 'block';
             
             canvas = document.getElementById('gameCanvas');
             ctx = canvas.getContext('2d');
 
-            // Connect to WebSocket
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${protocol}//${window.location.host}`;
             socket = new WebSocket(wsUrl);
@@ -201,15 +245,19 @@
                     type: 'join',
                     username: username
                 }));
-                startGameLoop();
             };
 
             socket.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 
-                if (data.type === 'players') {
+                if (data.type === 'init') {
+                    myPlayerId = data.playerId;
                     players = data.players;
+                    pipes = data.pipes;
                     updatePlayerList();
+                    startGameLoop();
+                } else if (data.type === 'pipeUpdate') {
+                    pipes = data.pipes;
                 } else if (data.type === 'playerUpdate') {
                     const index = players.findIndex(p => p.id === data.player.id);
                     if (index !== -1) {
@@ -242,63 +290,47 @@
         }
 
         function jump() {
-            if (player.isAlive) {
+            if (!player.hasStarted) {
+                player.hasStarted = true;
+                document.getElementById('startPrompt').style.display = 'none';
+            }
+            if (player.isAlive && player.hasStarted) {
                 player.velocity = JUMP_STRENGTH;
             }
         }
 
         function startGameLoop() {
             function loop() {
-                if (!player.isAlive) return;
+                if (player.hasStarted && player.isAlive) {
+                    player.velocity += GRAVITY;
+                    player.y += player.velocity;
 
-                // Physics
-                player.velocity += GRAVITY;
-                player.y += player.velocity;
+                    if (player.y < 0 || player.y > canvas.height - BIRD_SIZE) {
+                        die();
+                    }
 
-                // Boundaries
-                if (player.y < 0 || player.y > canvas.height - BIRD_SIZE) {
-                    die();
-                    return;
-                }
+                    pipes.forEach(pipe => {
+                        if (pipe.x < 100 && pipe.x + 60 > 50) {
+                            if (player.y < pipe.topHeight || player.y + BIRD_SIZE > pipe.bottomY) {
+                                die();
+                            }
+                        }
 
-                // Pipes
-                frameCount++;
-                if (frameCount % 120 === 0) {
-                    const pipeHeight = Math.random() * (canvas.height - PIPE_GAP - 100) + 50;
-                    pipes.push({
-                        x: canvas.width,
-                        topHeight: pipeHeight,
-                        bottomY: pipeHeight + PIPE_GAP,
-                        passed: false
+                        if (!pipe.passed && pipe.x + 60 < 50) {
+                            pipe.passed = true;
+                            score++;
+                            document.getElementById('score').textContent = score;
+                        }
                     });
                 }
 
-                pipes = pipes.filter(pipe => pipe.x > -PIPE_WIDTH);
-                pipes.forEach(pipe => {
-                    pipe.x -= 3;
-
-                    // Collision
-                    if (pipe.x < 100 && pipe.x + PIPE_WIDTH > 50) {
-                        if (player.y < pipe.topHeight || player.y + BIRD_SIZE > pipe.bottomY) {
-                            die();
-                        }
-                    }
-
-                    // Score
-                    if (!pipe.passed && pipe.x + PIPE_WIDTH < 50) {
-                        pipe.passed = true;
-                        score++;
-                        document.getElementById('score').textContent = score;
-                    }
-                });
-
-                // Send update
                 if (socket.readyState === WebSocket.OPEN) {
                     socket.send(JSON.stringify({
                         type: 'update',
                         y: player.y,
                         score: score,
-                        isAlive: player.isAlive
+                        isAlive: player.isAlive,
+                        hasStarted: player.hasStarted
                     }));
                 }
 
@@ -309,24 +341,20 @@
         }
 
         function draw() {
-            // Sky
             ctx.fillStyle = '#87CEEB';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Pipes
             ctx.fillStyle = '#2ECC40';
             pipes.forEach(pipe => {
-                ctx.fillRect(pipe.x, 0, PIPE_WIDTH, pipe.topHeight);
-                ctx.fillRect(pipe.x, pipe.bottomY, PIPE_WIDTH, canvas.height - pipe.bottomY);
+                ctx.fillRect(pipe.x, 0, 60, pipe.topHeight);
+                ctx.fillRect(pipe.x, pipe.bottomY, 60, canvas.height - pipe.bottomY);
             });
 
-            // Local player
             ctx.fillStyle = '#FF4136';
             ctx.fillRect(50, player.y, BIRD_SIZE, BIRD_SIZE);
 
-            // Other players
             players.forEach(p => {
-                if (p.username !== username && p.isAlive) {
+                if (p.id !== myPlayerId && p.isAlive && p.hasStarted) {
                     ctx.fillStyle = '#0074D9';
                     ctx.fillRect(50, p.y, BIRD_SIZE, BIRD_SIZE);
                     ctx.fillStyle = '#000';
@@ -347,20 +375,19 @@
                     type: 'update',
                     y: player.y,
                     score: score,
-                    isAlive: false
+                    isAlive: false,
+                    hasStarted: player.hasStarted
                 }));
             }
         }
 
         function restartGame() {
-            player = { y: 250, velocity: 0, isAlive: true };
-            pipes = [];
-            frameCount = 0;
+            player = { y: 250, velocity: 0, isAlive: true, hasStarted: false };
             score = 0;
             isGameOver = false;
             document.getElementById('score').textContent = 0;
             document.getElementById('gameOver').style.display = 'none';
-            startGameLoop();
+            document.getElementById('startPrompt').style.display = 'block';
         }
 
         function updatePlayerList() {
@@ -371,11 +398,11 @@
             players.forEach(p => {
                 const div = document.createElement('div');
                 div.className = 'player-item';
-                if (p.username === username) {
+                if (p.id === myPlayerId) {
                     div.classList.add('player-you');
                 }
                 div.innerHTML = `
-                    <span>${p.username}${p.username === username ? ' (You)' : ''}</span>
+                    <span>${p.username}${p.id === myPlayerId ? ' (You)' : ''}</span>
                     <span>Score: ${p.score || 0}</span>
                 `;
                 container.appendChild(div);
