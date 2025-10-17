@@ -134,7 +134,7 @@
         .player-item {
             display: flex;
             justify-content: space-between;
-            padding: 5px 0;
+            padding: 8px 0;
             border-bottom: 1px solid #e2e8f0;
         }
         .player-you {
@@ -214,13 +214,16 @@
         let player = { y: 250, velocity: 0, isAlive: true, hasStarted: false };
         let pipes = [];
         let score = 0;
-        let players = [];
+        let players = new Map();
         let isGameOver = false;
         let myPlayerId = null;
+        let passedPipes = new Set();
+        let lastScoreUpdate = 0;
 
         const GRAVITY = 0.5;
         const JUMP_STRENGTH = -8;
         const BIRD_SIZE = 30;
+        const BIRD_X = 50;
 
         function startGame() {
             username = document.getElementById('usernameInput').value.trim();
@@ -252,22 +255,27 @@
                 
                 if (data.type === 'init') {
                     myPlayerId = data.playerId;
-                    players = data.players;
-                    pipes = data.pipes;
+                    data.players.forEach(p => players.set(p.id, p));
+                    pipes = data.pipes || [];
                     updatePlayerList();
                     startGameLoop();
                 } else if (data.type === 'pipeUpdate') {
                     pipes = data.pipes;
-                } else if (data.type === 'playerUpdate') {
-                    const index = players.findIndex(p => p.id === data.player.id);
-                    if (index !== -1) {
-                        players[index] = data.player;
-                    } else {
-                        players.push(data.player);
-                    }
+                } else if (data.type === 'playerJoined') {
+                    players.set(data.player.id, data.player);
                     updatePlayerList();
+                } else if (data.type === 'playerUpdate') {
+                    if (data.player.id !== myPlayerId) {
+                        players.set(data.player.id, data.player);
+                    }
+                } else if (data.type === 'scoreUpdate') {
+                    const p = players.get(data.playerId);
+                    if (p) {
+                        p.score = data.score;
+                        updatePlayerList();
+                    }
                 } else if (data.type === 'playerLeft') {
-                    players = players.filter(p => p.id !== data.playerId);
+                    players.delete(data.playerId);
                     updatePlayerList();
                 }
             };
@@ -299,6 +307,7 @@
             }
         }
 
+        let updateCounter = 0;
         function startGameLoop() {
             function loop() {
                 if (player.hasStarted && player.isAlive) {
@@ -310,21 +319,29 @@
                     }
 
                     pipes.forEach(pipe => {
-                        if (pipe.x < 100 && pipe.x + 60 > 50) {
+                        if (pipe.x < BIRD_X + BIRD_SIZE && pipe.x + 60 > BIRD_X) {
                             if (player.y < pipe.topHeight || player.y + BIRD_SIZE > pipe.bottomY) {
                                 die();
                             }
                         }
 
-                        if (!pipe.passed && pipe.x + 60 < 50) {
-                            pipe.passed = true;
+                        if (!passedPipes.has(pipe.id) && pipe.x + 60 < BIRD_X) {
+                            passedPipes.add(pipe.id);
                             score++;
                             document.getElementById('score').textContent = score;
+                            
+                            if (socket.readyState === WebSocket.OPEN) {
+                                socket.send(JSON.stringify({
+                                    type: 'scoreUpdate',
+                                    score: score
+                                }));
+                            }
                         }
                     });
                 }
 
-                if (socket.readyState === WebSocket.OPEN) {
+                updateCounter++;
+                if (updateCounter % 3 === 0 && socket.readyState === WebSocket.OPEN) {
                     socket.send(JSON.stringify({
                         type: 'update',
                         y: player.y,
@@ -351,15 +368,19 @@
             });
 
             ctx.fillStyle = '#FF4136';
-            ctx.fillRect(50, player.y, BIRD_SIZE, BIRD_SIZE);
+            ctx.fillRect(BIRD_X, player.y, BIRD_SIZE, BIRD_SIZE);
+            
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 12px Arial';
+            ctx.fillText(username, BIRD_X, player.y - 8);
 
-            players.forEach(p => {
-                if (p.id !== myPlayerId && p.isAlive && p.hasStarted) {
+            players.forEach((p, id) => {
+                if (id !== myPlayerId && p.isAlive && p.hasStarted) {
                     ctx.fillStyle = '#0074D9';
-                    ctx.fillRect(50, p.y, BIRD_SIZE, BIRD_SIZE);
+                    ctx.fillRect(BIRD_X, p.y, BIRD_SIZE, BIRD_SIZE);
                     ctx.fillStyle = '#000';
                     ctx.font = '12px Arial';
-                    ctx.fillText(p.username, 50, p.y - 5);
+                    ctx.fillText(p.username, BIRD_X, p.y - 5);
                 }
             });
         }
@@ -385,25 +406,32 @@
             player = { y: 250, velocity: 0, isAlive: true, hasStarted: false };
             score = 0;
             isGameOver = false;
+            passedPipes.clear();
             document.getElementById('score').textContent = 0;
             document.getElementById('gameOver').style.display = 'none';
             document.getElementById('startPrompt').style.display = 'block';
         }
 
         function updatePlayerList() {
-            document.getElementById('playerCount').textContent = players.length;
+            const playerArray = Array.from(players.values());
+            playerArray.sort((a, b) => b.score - a.score);
+            
+            document.getElementById('playerCount').textContent = playerArray.length;
             const container = document.getElementById('playersContainer');
             container.innerHTML = '';
             
-            players.forEach(p => {
+            playerArray.forEach((p, index) => {
                 const div = document.createElement('div');
                 div.className = 'player-item';
                 if (p.id === myPlayerId) {
                     div.classList.add('player-you');
                 }
+                
+                const medal = index === 0 ? '🥇 ' : index === 1 ? '🥈 ' : index === 2 ? '🥉 ' : '';
+                
                 div.innerHTML = `
-                    <span>${p.username}${p.id === myPlayerId ? ' (You)' : ''}</span>
-                    <span>Score: ${p.score || 0}</span>
+                    <span>${medal}${p.username}${p.id === myPlayerId ? ' (You)' : ''}</span>
+                    <span><strong>${p.score}</strong></span>
                 `;
                 container.appendChild(div);
             });
