@@ -195,6 +195,7 @@
                 </div>
             </div>
             
+            <!-- ✅ FIXED: 800x600 canvas -->
             <canvas id="gameCanvas" width="800" height="600"></canvas>
             
             <div id="startPrompt">
@@ -224,7 +225,7 @@
         let pipes = [];
         let score = 0;
         let players = new Map();
-        let playerTargets = new Map(); // For smooth interpolation
+        let playerTargets = new Map();
         let isGameOver = false;
         let myPlayerId = null;
         let passedPipes = new Set();
@@ -237,7 +238,7 @@
         const BIRD_SIZE = 30;
         const BIRD_X = 50;
         const FORCEFIELD_DURATION = 5000;
-        const INTERPOLATION_SPEED = 0.3; // Smooth movement factor // 5 seconds in milliseconds
+        const INTERPOLATION_SPEED = 0.3;
 
         function startGame() {
             username = document.getElementById('usernameInput').value.trim();
@@ -252,12 +253,17 @@
             canvas = document.getElementById('gameCanvas');
             ctx = canvas.getContext('2d');
 
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}`;
+            // 🔥 FIXED WEBSOCKET URL FOR VERCEL + LOCALHOST
+            const wsUrl = window.location.hostname === 'localhost' 
+                ? 'ws://localhost:3000' 
+                : `wss://${window.location.host}`;
+            
+            console.log('🔌 Connecting to:', wsUrl);
+            
             socket = new WebSocket(wsUrl);
 
             socket.onopen = () => {
-                console.log('Connected to server');
+                console.log('✅ Connected to server');
                 socket.send(JSON.stringify({
                     type: 'join',
                     username: username
@@ -268,6 +274,7 @@
                 const data = JSON.parse(event.data);
                 
                 if (data.type === 'init') {
+                    console.log('🎮 Game initialized - pipes:', data.pipes.length);
                     myPlayerId = data.playerId;
                     data.players.forEach(p => {
                         players.set(p.id, p);
@@ -285,7 +292,6 @@
                 } else if (data.type === 'playerUpdate') {
                     if (data.player.id !== myPlayerId) {
                         players.set(data.player.id, data.player);
-                        // Set target position for smooth interpolation
                         if (!playerTargets.has(data.player.id)) {
                             playerTargets.set(data.player.id, { y: data.player.y, displayY: data.player.y });
                         } else {
@@ -306,11 +312,12 @@
             };
 
             socket.onerror = (error) => {
-                console.error('WebSocket error:', error);
+                console.error('❌ WebSocket error:', error);
+                alert('Connection failed! Please refresh and try again.');
             };
 
-            socket.onclose = () => {
-                console.log('Disconnected from server');
+            socket.onclose = (event) => {
+                console.log('🔌 Disconnected:', event.code, event.reason);
             };
 
             canvas.addEventListener('click', jump);
@@ -326,7 +333,6 @@
             if (!player.hasStarted) {
                 player.hasStarted = true;
                 document.getElementById('startPrompt').style.display = 'none';
-                // Activate forcefield on first start
                 activateForceField();
             }
             if (player.isAlive && player.hasStarted) {
@@ -348,17 +354,15 @@
 
         let updateCounter = 0;
         function startGameLoop() {
+            console.log('🚀 Game loop started!');
             function loop() {
-                // Interpolate other players' positions for smooth movement
                 players.forEach((p, id) => {
                     if (id !== myPlayerId && playerTargets.has(id)) {
                         const target = playerTargets.get(id);
-                        // Smooth interpolation
                         target.displayY += (target.y - target.displayY) * INTERPOLATION_SPEED;
                     }
                 });
 
-                // Check forcefield status
                 checkForceField();
 
                 if (player.hasStarted && player.isAlive) {
@@ -370,7 +374,6 @@
                     }
 
                     pipes.forEach(pipe => {
-                        // Only check collision if no forcefield
                         if (!hasForceField) {
                             if (pipe.x < BIRD_X + BIRD_SIZE && pipe.x + 60 > BIRD_X) {
                                 if (player.y < pipe.topHeight || player.y + BIRD_SIZE > pipe.bottomY) {
@@ -384,7 +387,7 @@
                             score++;
                             document.getElementById('score').textContent = score;
                             
-                            if (socket.readyState === WebSocket.OPEN) {
+                            if (socket && socket.readyState === WebSocket.OPEN) {
                                 socket.send(JSON.stringify({
                                     type: 'scoreUpdate',
                                     score: score
@@ -395,7 +398,7 @@
                 }
 
                 updateCounter++;
-                if (updateCounter % 2 === 0 && socket.readyState === WebSocket.OPEN) {
+                if (updateCounter % 2 === 0 && socket && socket.readyState === WebSocket.OPEN) {
                     socket.send(JSON.stringify({
                         type: 'update',
                         y: player.y,
@@ -412,29 +415,24 @@
         }
 
         function draw() {
-            // Sky gradient background
             const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
             skyGradient.addColorStop(0, '#87CEEB');
             skyGradient.addColorStop(1, '#E0F6FF');
             ctx.fillStyle = skyGradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Draw clouds
             ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
             const cloudOffset = (Date.now() / 50) % 900;
             drawCloud(100 - cloudOffset, 80);
             drawCloud(400 - cloudOffset, 120);
             drawCloud(700 - cloudOffset, 60);
 
-            // Draw ground
             ctx.fillStyle = '#DEB887';
             ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
             ctx.fillStyle = '#228B22';
             ctx.fillRect(0, canvas.height - 55, canvas.width, 5);
 
-            // Pipes with 3D effect
             pipes.forEach(pipe => {
-                // Top pipe
                 const topGradient = ctx.createLinearGradient(pipe.x, 0, pipe.x + 60, 0);
                 topGradient.addColorStop(0, '#2ECC40');
                 topGradient.addColorStop(0.5, '#3FDD51');
@@ -442,11 +440,9 @@
                 ctx.fillStyle = topGradient;
                 ctx.fillRect(pipe.x, 0, 60, pipe.topHeight);
                 
-                // Pipe cap (top)
                 ctx.fillStyle = '#25A033';
                 ctx.fillRect(pipe.x - 3, pipe.topHeight - 25, 66, 25);
                 
-                // Bottom pipe
                 const bottomGradient = ctx.createLinearGradient(pipe.x, 0, pipe.x + 60, 0);
                 bottomGradient.addColorStop(0, '#2ECC40');
                 bottomGradient.addColorStop(0.5, '#3FDD51');
@@ -454,20 +450,16 @@
                 ctx.fillStyle = bottomGradient;
                 ctx.fillRect(pipe.x, pipe.bottomY, 60, canvas.height - pipe.bottomY);
                 
-                // Pipe cap (bottom)
                 ctx.fillStyle = '#25A033';
                 ctx.fillRect(pipe.x - 3, pipe.bottomY, 66, 25);
 
-                // Pipe highlights
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
                 ctx.fillRect(pipe.x + 5, 0, 8, pipe.topHeight);
                 ctx.fillRect(pipe.x + 5, pipe.bottomY, 8, canvas.height - pipe.bottomY);
             });
 
-            // Draw local player bird with details
             drawBird(BIRD_X, player.y, '#FF4136', '#C70000', hasForceField);
             
-            // Player name above bird
             ctx.fillStyle = '#000';
             ctx.font = 'bold 12px Arial';
             ctx.strokeStyle = '#FFF';
@@ -475,7 +467,6 @@
             ctx.strokeText(username, BIRD_X, player.y - 12);
             ctx.fillText(username, BIRD_X, player.y - 12);
 
-            // Forcefield timer
             if (hasForceField) {
                 const timeLeft = Math.ceil((forceFieldEndTime - Date.now()) / 1000);
                 ctx.fillStyle = 'rgba(0, 191, 255, 0.8)';
@@ -487,7 +478,6 @@
                 ctx.fillText(text, BIRD_X - 5, player.y + 50);
             }
 
-            // Other players
             players.forEach((p, id) => {
                 if (id !== myPlayerId && p.isAlive && p.hasStarted) {
                     const target = playerTargets.get(id);
@@ -504,7 +494,6 @@
         }
 
         function drawBird(x, y, bodyColor, darkColor, shield) {
-            // Draw forcefield
             if (shield) {
                 const pulseSize = 5 + Math.sin(Date.now() / 100) * 3;
                 ctx.strokeStyle = 'rgba(0, 191, 255, 0.8)';
@@ -520,31 +509,26 @@
                 ctx.stroke();
             }
 
-            // Bird body
             ctx.fillStyle = bodyColor;
             ctx.beginPath();
             ctx.arc(x + BIRD_SIZE/2, y + BIRD_SIZE/2, BIRD_SIZE/2, 0, Math.PI * 2);
             ctx.fill();
 
-            // Wing
             ctx.fillStyle = darkColor;
             ctx.beginPath();
             ctx.ellipse(x + BIRD_SIZE/2, y + BIRD_SIZE/2 + 5, 8, 6, Math.PI/6, 0, Math.PI * 2);
             ctx.fill();
 
-            // Eye white
             ctx.fillStyle = '#FFF';
             ctx.beginPath();
             ctx.arc(x + BIRD_SIZE/2 + 8, y + BIRD_SIZE/2 - 3, 5, 0, Math.PI * 2);
             ctx.fill();
 
-            // Eye pupil
             ctx.fillStyle = '#000';
             ctx.beginPath();
             ctx.arc(x + BIRD_SIZE/2 + 10, y + BIRD_SIZE/2 - 3, 3, 0, Math.PI * 2);
             ctx.fill();
 
-            // Beak
             ctx.fillStyle = '#FFA500';
             ctx.beginPath();
             ctx.moveTo(x + BIRD_SIZE/2 + 12, y + BIRD_SIZE/2 + 3);
@@ -568,7 +552,7 @@
             document.getElementById('gameOver').style.display = 'block';
             document.getElementById('finalScore').textContent = score;
             
-            if (socket.readyState === WebSocket.OPEN) {
+            if (socket && socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({
                     type: 'update',
                     y: player.y,
