@@ -224,6 +224,7 @@
         let pipes = [];
         let score = 0;
         let players = new Map();
+        let playerTargets = new Map(); // For smooth interpolation
         let isGameOver = false;
         let myPlayerId = null;
         let passedPipes = new Set();
@@ -235,7 +236,8 @@
         const JUMP_STRENGTH = -8;
         const BIRD_SIZE = 30;
         const BIRD_X = 50;
-        const FORCEFIELD_DURATION = 5000; // 5 seconds in milliseconds
+        const FORCEFIELD_DURATION = 5000;
+        const INTERPOLATION_SPEED = 0.3; // Smooth movement factor // 5 seconds in milliseconds
 
         function startGame() {
             username = document.getElementById('usernameInput').value.trim();
@@ -267,7 +269,10 @@
                 
                 if (data.type === 'init') {
                     myPlayerId = data.playerId;
-                    data.players.forEach(p => players.set(p.id, p));
+                    data.players.forEach(p => {
+                        players.set(p.id, p);
+                        playerTargets.set(p.id, { y: p.y, displayY: p.y });
+                    });
                     pipes = data.pipes || [];
                     updatePlayerList();
                     startGameLoop();
@@ -275,10 +280,17 @@
                     pipes = data.pipes;
                 } else if (data.type === 'playerJoined') {
                     players.set(data.player.id, data.player);
+                    playerTargets.set(data.player.id, { y: data.player.y, displayY: data.player.y });
                     updatePlayerList();
                 } else if (data.type === 'playerUpdate') {
                     if (data.player.id !== myPlayerId) {
                         players.set(data.player.id, data.player);
+                        // Set target position for smooth interpolation
+                        if (!playerTargets.has(data.player.id)) {
+                            playerTargets.set(data.player.id, { y: data.player.y, displayY: data.player.y });
+                        } else {
+                            playerTargets.get(data.player.id).y = data.player.y;
+                        }
                     }
                 } else if (data.type === 'scoreUpdate') {
                     const p = players.get(data.playerId);
@@ -288,6 +300,7 @@
                     }
                 } else if (data.type === 'playerLeft') {
                     players.delete(data.playerId);
+                    playerTargets.delete(data.playerId);
                     updatePlayerList();
                 }
             };
@@ -336,6 +349,15 @@
         let updateCounter = 0;
         function startGameLoop() {
             function loop() {
+                // Interpolate other players' positions for smooth movement
+                players.forEach((p, id) => {
+                    if (id !== myPlayerId && playerTargets.has(id)) {
+                        const target = playerTargets.get(id);
+                        // Smooth interpolation
+                        target.displayY += (target.y - target.displayY) * INTERPOLATION_SPEED;
+                    }
+                });
+
                 // Check forcefield status
                 checkForceField();
 
@@ -373,7 +395,7 @@
                 }
 
                 updateCounter++;
-                if (updateCounter % 3 === 0 && socket.readyState === WebSocket.OPEN) {
+                if (updateCounter % 2 === 0 && socket.readyState === WebSocket.OPEN) {
                     socket.send(JSON.stringify({
                         type: 'update',
                         y: player.y,
@@ -468,13 +490,15 @@
             // Other players
             players.forEach((p, id) => {
                 if (id !== myPlayerId && p.isAlive && p.hasStarted) {
-                    drawBird(BIRD_X, p.y, '#0074D9', '#0056A3', false);
+                    const target = playerTargets.get(id);
+                    const displayY = target ? target.displayY : p.y;
+                    drawBird(BIRD_X, displayY, '#0074D9', '#0056A3', false);
                     ctx.fillStyle = '#000';
                     ctx.font = '12px Arial';
                     ctx.strokeStyle = '#FFF';
                     ctx.lineWidth = 2;
-                    ctx.strokeText(p.username, BIRD_X, p.y - 8);
-                    ctx.fillText(p.username, BIRD_X, p.y - 8);
+                    ctx.strokeText(p.username, BIRD_X, displayY - 8);
+                    ctx.fillText(p.username, BIRD_X, displayY - 8);
                 }
             });
         }
