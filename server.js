@@ -145,20 +145,18 @@ wss.on('connection', (ws) => {
             player.isAlive = data.isAlive;
             player.hasStarted = data.hasStarted;
 
-            // Only broadcast player updates every few frames to reduce traffic
-            if (Math.random() < 0.3) { // 30% of updates get broadcast
-              broadcast({
-                type: 'playerUpdate',
-                player: {
-                  id: player.id,
-                  username: player.username,
-                  y: player.y,
-                  score: player.score,
-                  isAlive: player.isAlive,
-                  hasStarted: player.hasStarted
-                }
-              }, ws);
-            }
+            // Broadcast all player updates for smoother movement
+            broadcast({
+              type: 'playerUpdate',
+              player: {
+                id: player.id,
+                username: player.username,
+                y: player.y,
+                score: player.score,
+                isAlive: player.isAlive,
+                hasStarted: player.hasStarted
+              }
+            }, ws);
           }
           break;
 
