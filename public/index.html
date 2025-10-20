@@ -157,6 +157,12 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             animation: pulse 2s infinite;
         }
+        #startPrompt .shield-notice {
+            font-size: 16px;
+            color: #00BFFF;
+            margin-top: 10px;
+            font-weight: normal;
+        }
         @keyframes pulse {
             0%, 100% { transform: translate(-50%, -50%) scale(1); }
             50% { transform: translate(-50%, -50%) scale(1.05); }
@@ -191,7 +197,10 @@
             
             <canvas id="gameCanvas" width="800" height="600"></canvas>
             
-            <div id="startPrompt">Press SPACE to Start!</div>
+            <div id="startPrompt">
+                Press SPACE to Start!
+                <div class="shield-notice">🛡️ 5 Second Shield Active!</div>
+            </div>
             
             <div id="gameOver">
                 <h2 style="margin-bottom: 15px; font-size: 32px;">Game Over!</h2>
@@ -219,11 +228,14 @@
         let myPlayerId = null;
         let passedPipes = new Set();
         let lastScoreUpdate = 0;
+        let hasForceField = false;
+        let forceFieldEndTime = 0;
 
         const GRAVITY = 0.5;
         const JUMP_STRENGTH = -8;
         const BIRD_SIZE = 30;
         const BIRD_X = 50;
+        const FORCEFIELD_DURATION = 5000; // 5 seconds in milliseconds
 
         function startGame() {
             username = document.getElementById('usernameInput').value.trim();
@@ -301,15 +313,32 @@
             if (!player.hasStarted) {
                 player.hasStarted = true;
                 document.getElementById('startPrompt').style.display = 'none';
+                // Activate forcefield on first start
+                activateForceField();
             }
             if (player.isAlive && player.hasStarted) {
                 player.velocity = JUMP_STRENGTH;
             }
         }
 
+        function activateForceField() {
+            hasForceField = true;
+            forceFieldEndTime = Date.now() + FORCEFIELD_DURATION;
+        }
+
+        function checkForceField() {
+            if (hasForceField && Date.now() >= forceFieldEndTime) {
+                hasForceField = false;
+            }
+            return hasForceField;
+        }
+
         let updateCounter = 0;
         function startGameLoop() {
             function loop() {
+                // Check forcefield status
+                checkForceField();
+
                 if (player.hasStarted && player.isAlive) {
                     player.velocity += GRAVITY;
                     player.y += player.velocity;
@@ -319,9 +348,12 @@
                     }
 
                     pipes.forEach(pipe => {
-                        if (pipe.x < BIRD_X + BIRD_SIZE && pipe.x + 60 > BIRD_X) {
-                            if (player.y < pipe.topHeight || player.y + BIRD_SIZE > pipe.bottomY) {
-                                die();
+                        // Only check collision if no forcefield
+                        if (!hasForceField) {
+                            if (pipe.x < BIRD_X + BIRD_SIZE && pipe.x + 60 > BIRD_X) {
+                                if (player.y < pipe.topHeight || player.y + BIRD_SIZE > pipe.bottomY) {
+                                    die();
+                                }
                             }
                         }
 
@@ -358,31 +390,152 @@
         }
 
         function draw() {
-            ctx.fillStyle = '#87CEEB';
+            // Sky gradient background
+            const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            skyGradient.addColorStop(0, '#87CEEB');
+            skyGradient.addColorStop(1, '#E0F6FF');
+            ctx.fillStyle = skyGradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            ctx.fillStyle = '#2ECC40';
+            // Draw clouds
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            const cloudOffset = (Date.now() / 50) % 900;
+            drawCloud(100 - cloudOffset, 80);
+            drawCloud(400 - cloudOffset, 120);
+            drawCloud(700 - cloudOffset, 60);
+
+            // Draw ground
+            ctx.fillStyle = '#DEB887';
+            ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(0, canvas.height - 55, canvas.width, 5);
+
+            // Pipes with 3D effect
             pipes.forEach(pipe => {
+                // Top pipe
+                const topGradient = ctx.createLinearGradient(pipe.x, 0, pipe.x + 60, 0);
+                topGradient.addColorStop(0, '#2ECC40');
+                topGradient.addColorStop(0.5, '#3FDD51');
+                topGradient.addColorStop(1, '#1EA030');
+                ctx.fillStyle = topGradient;
                 ctx.fillRect(pipe.x, 0, 60, pipe.topHeight);
+                
+                // Pipe cap (top)
+                ctx.fillStyle = '#25A033';
+                ctx.fillRect(pipe.x - 3, pipe.topHeight - 25, 66, 25);
+                
+                // Bottom pipe
+                const bottomGradient = ctx.createLinearGradient(pipe.x, 0, pipe.x + 60, 0);
+                bottomGradient.addColorStop(0, '#2ECC40');
+                bottomGradient.addColorStop(0.5, '#3FDD51');
+                bottomGradient.addColorStop(1, '#1EA030');
+                ctx.fillStyle = bottomGradient;
                 ctx.fillRect(pipe.x, pipe.bottomY, 60, canvas.height - pipe.bottomY);
+                
+                // Pipe cap (bottom)
+                ctx.fillStyle = '#25A033';
+                ctx.fillRect(pipe.x - 3, pipe.bottomY, 66, 25);
+
+                // Pipe highlights
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.fillRect(pipe.x + 5, 0, 8, pipe.topHeight);
+                ctx.fillRect(pipe.x + 5, pipe.bottomY, 8, canvas.height - pipe.bottomY);
             });
 
-            ctx.fillStyle = '#FF4136';
-            ctx.fillRect(BIRD_X, player.y, BIRD_SIZE, BIRD_SIZE);
+            // Draw local player bird with details
+            drawBird(BIRD_X, player.y, '#FF4136', '#C70000', hasForceField);
             
+            // Player name above bird
             ctx.fillStyle = '#000';
             ctx.font = 'bold 12px Arial';
-            ctx.fillText(username, BIRD_X, player.y - 8);
+            ctx.strokeStyle = '#FFF';
+            ctx.lineWidth = 3;
+            ctx.strokeText(username, BIRD_X, player.y - 12);
+            ctx.fillText(username, BIRD_X, player.y - 12);
 
+            // Forcefield timer
+            if (hasForceField) {
+                const timeLeft = Math.ceil((forceFieldEndTime - Date.now()) / 1000);
+                ctx.fillStyle = 'rgba(0, 191, 255, 0.8)';
+                ctx.font = 'bold 16px Arial';
+                ctx.strokeStyle = '#FFF';
+                ctx.lineWidth = 3;
+                const text = `Shield: ${timeLeft}s`;
+                ctx.strokeText(text, BIRD_X - 5, player.y + 50);
+                ctx.fillText(text, BIRD_X - 5, player.y + 50);
+            }
+
+            // Other players
             players.forEach((p, id) => {
                 if (id !== myPlayerId && p.isAlive && p.hasStarted) {
-                    ctx.fillStyle = '#0074D9';
-                    ctx.fillRect(BIRD_X, p.y, BIRD_SIZE, BIRD_SIZE);
+                    drawBird(BIRD_X, p.y, '#0074D9', '#0056A3', false);
                     ctx.fillStyle = '#000';
                     ctx.font = '12px Arial';
-                    ctx.fillText(p.username, BIRD_X, p.y - 5);
+                    ctx.strokeStyle = '#FFF';
+                    ctx.lineWidth = 2;
+                    ctx.strokeText(p.username, BIRD_X, p.y - 8);
+                    ctx.fillText(p.username, BIRD_X, p.y - 8);
                 }
             });
+        }
+
+        function drawBird(x, y, bodyColor, darkColor, shield) {
+            // Draw forcefield
+            if (shield) {
+                const pulseSize = 5 + Math.sin(Date.now() / 100) * 3;
+                ctx.strokeStyle = 'rgba(0, 191, 255, 0.8)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(x + BIRD_SIZE/2, y + BIRD_SIZE/2, BIRD_SIZE/2 + pulseSize, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                ctx.strokeStyle = 'rgba(0, 191, 255, 0.4)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(x + BIRD_SIZE/2, y + BIRD_SIZE/2, BIRD_SIZE/2 + pulseSize + 5, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // Bird body
+            ctx.fillStyle = bodyColor;
+            ctx.beginPath();
+            ctx.arc(x + BIRD_SIZE/2, y + BIRD_SIZE/2, BIRD_SIZE/2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Wing
+            ctx.fillStyle = darkColor;
+            ctx.beginPath();
+            ctx.ellipse(x + BIRD_SIZE/2, y + BIRD_SIZE/2 + 5, 8, 6, Math.PI/6, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eye white
+            ctx.fillStyle = '#FFF';
+            ctx.beginPath();
+            ctx.arc(x + BIRD_SIZE/2 + 8, y + BIRD_SIZE/2 - 3, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eye pupil
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(x + BIRD_SIZE/2 + 10, y + BIRD_SIZE/2 - 3, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Beak
+            ctx.fillStyle = '#FFA500';
+            ctx.beginPath();
+            ctx.moveTo(x + BIRD_SIZE/2 + 12, y + BIRD_SIZE/2 + 3);
+            ctx.lineTo(x + BIRD_SIZE/2 + 20, y + BIRD_SIZE/2 + 3);
+            ctx.lineTo(x + BIRD_SIZE/2 + 12, y + BIRD_SIZE/2 + 8);
+            ctx.fill();
+        }
+
+        function drawCloud(x, y) {
+            ctx.beginPath();
+            ctx.arc(x, y, 20, 0, Math.PI * 2);
+            ctx.arc(x + 25, y, 25, 0, Math.PI * 2);
+            ctx.arc(x + 50, y, 20, 0, Math.PI * 2);
+            ctx.arc(x + 25, y - 15, 18, 0, Math.PI * 2);
+            ctx.fill();
         }
 
         function die() {
@@ -407,6 +560,8 @@
             score = 0;
             isGameOver = false;
             passedPipes.clear();
+            hasForceField = false;
+            forceFieldEndTime = 0;
             document.getElementById('score').textContent = 0;
             document.getElementById('gameOver').style.display = 'none';
             document.getElementById('startPrompt').style.display = 'block';
