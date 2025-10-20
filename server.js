@@ -1,21 +1,23 @@
-// server.js - Backend for Multiplayer Flappy Bird
 const express = require('express');
 const WebSocket = require('ws');
 const path = require('path');
 
+// Create Express app
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-// Serve static files (your frontend HTML/CSS/JS)
-app.use(express.static('public'));
+// Serve static files from public folder
+app.use(express.static(path.join(process.cwd(), 'public')));
 
-// Start HTTP server
-const server = app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Catch-all to serve index.html for client-side routing
+app.get('*', (req, res) => {
+  res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
 });
 
-// WebSocket server
-const wss = new WebSocket.Server({ server });
+// Export Express app for Vercel serverless
+module.exports = app;
+
+// WebSocket server setup (Vercel-compatible)
+const server = app.listen(process.env.PORT || 3000);
 
 // Store connected players
 const players = new Map();
@@ -29,7 +31,7 @@ let gameState = {
 };
 
 // Game constants
-const PIPE_SPAWN_INTERVAL = 90; // frames (every 1.5 seconds at 60fps)
+const PIPE_SPAWN_INTERVAL = 90;
 const PIPE_SPEED = 3;
 const PIPE_WIDTH = 60;
 const PIPE_GAP = 150;
@@ -38,7 +40,6 @@ const CANVAS_HEIGHT = 600;
 
 // Update pipes on server side
 function updatePipes() {
-  // Check if any player has started
   let anyPlayerStarted = false;
   players.forEach(player => {
     if (player.hasStarted) {
@@ -46,7 +47,6 @@ function updatePipes() {
     }
   });
 
-  // Only update pipes if at least one player has started
   if (!anyPlayerStarted) {
     gameState.gameStarted = false;
     gameState.pipes = [];
@@ -60,7 +60,6 @@ function updatePipes() {
     gameState.pipes = [];
   }
 
-  // Spawn new pipes
   gameState.frameCount++;
   if (gameState.frameCount % PIPE_SPAWN_INTERVAL === 0) {
     const pipeHeight = Math.random() * (CANVAS_HEIGHT - PIPE_GAP - 100) + 50;
@@ -72,19 +71,17 @@ function updatePipes() {
     });
   }
 
-  // Move pipes
   gameState.pipes = gameState.pipes.filter(pipe => pipe.x > -PIPE_WIDTH);
   gameState.pipes.forEach(pipe => {
     pipe.x -= PIPE_SPEED;
   });
 }
 
-// Game loop - runs on server to keep pipes synchronized
+// Game loop
 let lastBroadcast = Date.now();
 setInterval(() => {
   updatePipes();
   
-  // Only broadcast every 16ms (60fps) to reduce load
   const now = Date.now();
   if (now - lastBroadcast >= 16) {
     lastBroadcast = now;
@@ -93,7 +90,24 @@ setInterval(() => {
       pipes: gameState.pipes
     });
   }
-}, 16); // ~60 FPS
+}, 16);
+
+// WebSocket server
+const wss = new WebSocket.Server({ 
+  server,
+  // Vercel WebSocket settings
+  perMessageDeflate: {
+    zlibDeflateOptions: {
+      chunkSize: 1024
+    },
+    zlibInflateOptions: {
+      chunkSize: 10 * 1024
+    },
+    clientNoContextTakeover: true,
+    serverNoContextTakeover: true,
+    skipNegotiate: true
+  }
+});
 
 wss.on('connection', (ws) => {
   console.log('New client connected');
@@ -106,7 +120,6 @@ wss.on('connection', (ws) => {
 
       switch(data.type) {
         case 'join':
-          // New player joins
           playerId = generateId();
           const newPlayer = {
             id: playerId,
@@ -119,7 +132,6 @@ wss.on('connection', (ws) => {
           
           players.set(playerId, newPlayer);
           
-          // Send current game state to new player
           ws.send(JSON.stringify({
             type: 'init',
             playerId: playerId,
@@ -127,7 +139,6 @@ wss.on('connection', (ws) => {
             pipes: gameState.pipes
           }));
 
-          // Notify all other players about new player
           broadcast({
             type: 'playerJoined',
             player: newPlayer
@@ -137,7 +148,6 @@ wss.on('connection', (ws) => {
           break;
 
         case 'update':
-          // Update player position and state
           if (playerId && players.has(playerId)) {
             const player = players.get(playerId);
             player.y = data.y;
@@ -145,7 +155,6 @@ wss.on('connection', (ws) => {
             player.isAlive = data.isAlive;
             player.hasStarted = data.hasStarted;
 
-            // Broadcast all player updates for smoother movement
             broadcast({
               type: 'playerUpdate',
               player: {
@@ -161,12 +170,10 @@ wss.on('connection', (ws) => {
           break;
 
         case 'scoreUpdate':
-          // Dedicated score update (more reliable)
           if (playerId && players.has(playerId)) {
             const player = players.get(playerId);
             player.score = data.score;
             
-            // Broadcast score update to everyone
             broadcast({
               type: 'scoreUpdate',
               playerId: playerId,
@@ -176,7 +183,6 @@ wss.on('connection', (ws) => {
           break;
 
         case 'leave':
-          // Player leaves
           if (playerId && players.has(playerId)) {
             players.delete(playerId);
             broadcast({
@@ -193,7 +199,6 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
-    // Remove player when connection closes
     if (playerId && players.has(playerId)) {
       const username = players.get(playerId).username;
       players.delete(playerId);
@@ -210,7 +215,6 @@ wss.on('connection', (ws) => {
   });
 });
 
-// Broadcast message to all connected clients except sender
 function broadcast(data, excludeWs = null) {
   const message = JSON.stringify(data);
   wss.clients.forEach(client => {
@@ -220,10 +224,8 @@ function broadcast(data, excludeWs = null) {
   });
 }
 
-// Generate unique ID
 function generateId() {
   return Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
 }
 
-console.log('WebSocket server is ready for connections');
-console.log('Game loop running - pipes synchronized across all clients');
+console.log('Multiplayer Flappy Bird server ready!');
