@@ -1,7 +1,7 @@
 {
   "name": "flappy-bird-multiplayer",
   "version": "1.0.0",
-  "description": "Multiplayer Flappy Bird on Railway",
+  "description": "TMAGames Hub on Railway",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
