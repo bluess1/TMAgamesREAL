@@ -254,9 +254,11 @@
             ctx = canvas.getContext('2d');
 
             // 🔥 FIXED WEBSOCKET URL FOR VERCEL + LOCALHOST
-            const wsUrl = window.location.hostname === 'localhost' 
-                ? 'ws://localhost:3000' 
-                : `wss://${window.location.host}`;
+const wsUrl = window.location.hostname === 'localhost' 
+  ? 'ws://localhost:3000' 
+  : `wss://${window.location.host}`; // Railway uses same host for WS
+console.log('🔌 Connecting to:', wsUrl);
+socket = new WebSocket(wsUrl);
             
             console.log('🔌 Connecting to:', wsUrl);
             
