@@ -1,38 +1,7 @@
-const express = require('express');
 const WebSocket = require('ws');
-const path = require('path');
 
-// Create Express app
-const app = express();
-
-// Serve static files from public folder
-app.use(express.static(path.join(__dirname, '..', 'public')));
-
-// Catch-all to serve index.html for client-side routing
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
-});
-
-// Start HTTP server
-const PORT = process.env.PORT || 3000;
-const server = app.listen(PORT, () => {
-  console.log(`🚀 Game Hub server running on port ${PORT}`);
-});
-
-// WebSocket server for Flappy Bird (/flappy)
+// WebSocket server for Flappy Bird (no HTTP server!)
 const wssFlappy = new WebSocket.Server({ noServer: true });
-
-// Handle WebSocket upgrades
-server.on('upgrade', (request, socket, head) => {
-  const pathname = request.url;
-  if (pathname === '/flappy') {
-    wssFlappy.handleUpgrade(request, socket, head, (ws) => {
-      wssFlappy.emit('connection', ws, request);
-    });
-  } else {
-    socket.destroy();
-  }
-});
 
 // Flappy Bird game state
 const flappyPlayers = new Map();
@@ -223,5 +192,8 @@ function broadcastFlappy(data, excludeWs = null) {
 function generateId() {
   return Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
 }
+
+// EXPORT the WebSocket server (don't create HTTP server or call .listen!)
+module.exports = { wssFlappy };
 
 console.log('Multiplayer Flappy Bird server ready!');
