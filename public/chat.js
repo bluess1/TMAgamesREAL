@@ -382,10 +382,13 @@ class GlobalChat {
             }));
             this.addMessage(`You → ${targetUsername}`, message, true);
         } else {
+            // Send global message
             this.socket.send(JSON.stringify({
                 type: 'chat',
                 message: message
             }));
+            // Show your own message immediately
+            this.addMessage(this.username, message, false);
         }
         
         input.value = '';
