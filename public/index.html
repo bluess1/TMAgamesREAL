@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TMAGames - Game Hub</title>
+    <title>TMAGames - Main Menu</title>
     <style>
         * {
             margin: 0;
@@ -12,90 +12,86 @@
         }
         body {
             font-family: Arial, sans-serif;
-            background: linear-gradient(to bottom, #4299e1, #2b6cb0);
+            background: linear-gradient(to bottom, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: hidden;
         }
-        #menu {
+        .menu-container {
             background: white;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            max-width: 400px;
-            width: 90%;
+            padding: 50px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
             text-align: center;
         }
         h1 {
-            color: #2b6cb0;
-            margin-bottom: 20px;
-            font-size: 2.5em;
-        }
-        h2 {
-            color: #4a5568;
-            margin-bottom: 30px;
-        }
-        input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #cbd5e0;
-            border-radius: 5px;
-            font-size: 16px;
+            color: #667eea;
+            font-size: 48px;
             margin-bottom: 20px;
         }
-        button {
-            width: 100%;
-            padding: 15px;
-            background: #2b6cb0;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 18px;
-            font-weight: bold;
+        p {
+            color: #666;
+            margin-bottom: 40px;
+        }
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        .game-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px;
+            border-radius: 15px;
             cursor: pointer;
-            transition: background 0.3s;
+            transition: transform 0.3s, box-shadow 0.3s;
+            text-decoration: none;
+            color: white;
+        }
+        .game-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .game-card h2 {
+            font-size: 24px;
             margin-bottom: 10px;
         }
-        button:hover {
-            background: #2c5282;
-        }
-        .instructions {
-            margin-top: 20px;
-            text-align: center;
-            color: #4a5568;
+        .game-card p {
             font-size: 14px;
+            color: rgba(255,255,255,0.9);
         }
     </style>
 </head>
 <body>
-    <div id="menu">
-        <h1>TMAGames</h1>
-        <h2>Choose a Game</h2>
-        <label style="display: block; margin-bottom: 10px; font-weight: bold;">Enter Username</label>
-        <input type="text" id="usernameInput" placeholder="Your username..." maxlength="15">
-        <button onclick="selectGame('flappy')">Play Flappy Bird Multiplayer</button>
-        <button onclick="selectGame('new-game')">Play New Game (Coming Soon)</button>
-        <div class="instructions">
-            <p><strong>Welcome to TMAGames!</strong></p>
-            <p>Enter a username and select a game to start playing.</p>
-            <p>Flappy Bird: Press SPACE or CLICK to flap, avoid pipes!</p>
+    <div class="menu-container">
+        <h1>🎮 TMAGames</h1>
+        <p>Welcome! Choose a game to play with friends online</p>
+        
+        <div class="games-grid">
+            <a href="/flappy.html" class="game-card">
+                <h2>🐦 Flappy Bird</h2>
+                <p>Multiplayer madness!</p>
+            </a>
+            
+            <a href="/new-game.html" class="game-card">
+                <h2>🎲 New Game</h2>
+                <p>Coming soon...</p>
+            </a>
+            
+            <div class="game-card" style="opacity: 0.5; cursor: not-allowed;">
+                <h2>🎯 Game 3</h2>
+                <p>Coming soon...</p>
+            </div>
+            
+            <div class="game-card" style="opacity: 0.5; cursor: not-allowed;">
+                <h2>⚔️ Game 4</h2>
+                <p>Coming soon...</p>
+            </div>
         </div>
     </div>
 
-    <script>
-        function selectGame(game) {
-            const username = document.getElementById('usernameInput').value.trim();
-            if (!username) {
-                alert('Please enter a username!');
-                return;
-            }
-            // Store username in localStorage for games to access
-            localStorage.setItem('tmaUsername', username);
-            // Redirect to selected game
-            window.location.href = game === 'flappy' ? '/flappy.html' : '/new-game.html';
-        }
-    </script>
+    <!-- Include Global Chat -->
+    <script src="/chat.js"></script>
 </body>
 </html>
