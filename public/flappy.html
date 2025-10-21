@@ -146,15 +146,203 @@
             max-width: 300px;
             z-index: 1000;
         }
+        #chatBox {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.95);
+            padding: 15px;
+            border-radius: 10px;
+            width: 300px;
+            height: 500px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+        #chatHeader {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #2b6cb0;
+            padding-bottom: 10px;
+        }
+        #chatTabs {
+            display: flex;
+            gap: 5px;
+        }
+        .chat-tab {
+            padding: 5px 10px;
+            background: #e2e8f0;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .chat-tab.active {
+            background: #2b6cb0;
+            color: white;
+        }
+        #chatMessages {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 10px;
+            background: white;
+        }
+        .chat-message {
+            margin-bottom: 8px;
+            padding: 5px 8px;
+            border-radius: 5px;
+            background: #f7fafc;
+            word-wrap: break-word;
+        }
+        .chat-message.dm {
+            background: #e6fffa;
+            border-left: 3px solid #38b2ac;
+        }
+        .chat-message.system {
+            background: #fff5f5;
+            border-left: 3px solid #fc8181;
+            font-style: italic;
+        }
+        .chat-sender {
+            font-weight: bold;
+            color: #2b6cb0;
+            font-size: 12px;
+        }
+        .chat-text {
+            color: #2d3748;
+            font-size: 13px;
+            margin-top: 2px;
+        }
+        .chat-timestamp {
+            font-size: 10px;
+            color: #a0aec0;
+        }
+        #chatInputArea {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        #dmTargetInput {
+            display: none;
+            padding: 5px;
+            border: 2px solid #38b2ac;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+        #chatInputWrapper {
+            display: flex;
+            gap: 5px;
+        }
+        #chatInput {
+            flex: 1;
+            padding: 8px;
+            border: 2px solid #cbd5e0;
+            border-radius: 5px;
+            font-size: 13px;
+        }
+        #chatSendBtn {
+            padding: 8px 15px;
+            background: #2b6cb0;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        #chatSendBtn:hover {
+            background: #2c5282;
+        }
+        #usernameEditor {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1001;
+        }
+        #editUsernameBtn {
+            padding: 8px 15px;
+            background: rgba(255,255,255,0.9);
+            border: 2px solid #2b6cb0;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #2b6cb0;
+            font-size: 14px;
+        }
+        #editUsernameBtn:hover {
+            background: white;
+        }
+        #usernameEditModal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            z-index: 1002;
+        }
+        #modalOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1001;
+        }
     </style>
 </head>
 <body>
+    <div id="modalOverlay" onclick="closeUsernameModal()"></div>
+    
+    <div id="usernameEditor">
+        <button id="editUsernameBtn" onclick="openUsernameModal()">✏️ Edit Username</button>
+    </div>
+
+    <div id="usernameEditModal">
+        <h2 style="margin-bottom: 20px; color: #2b6cb0;">Edit Username</h2>
+        <input type="text" id="newUsernameInput" placeholder="New username..." maxlength="15" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 2px solid #cbd5e0; border-radius: 5px; font-size: 16px;">
+        <div style="display: flex; gap: 10px;">
+            <button onclick="saveNewUsername()" style="flex: 1;">Save</button>
+            <button onclick="closeUsernameModal()" style="flex: 1; background: #718096;">Cancel</button>
+        </div>
+    </div>
+
     <div id="debugInfo">
         <div>🔍 DEBUG INFO:</div>
         <div id="debugStatus">Initializing...</div>
         <div id="debugConnection">Connection: Not started</div>
         <div id="debugPlayers">Players: 0</div>
         <div id="debugPipes">Pipes: 0</div>
+    </div>
+
+    <div id="chatBox">
+        <div id="chatHeader">
+            <h3 style="margin: 0; color: #2b6cb0;">Chat</h3>
+            <div id="chatTabs">
+                <button class="chat-tab active" onclick="switchChatTab('global')">Global</button>
+                <button class="chat-tab" onclick="switchChatTab('dm')">DM</button>
+            </div>
+        </div>
+        <div id="chatMessages"></div>
+        <div id="chatInputArea">
+            <input type="text" id="dmTargetInput" placeholder="Username to DM...">
+            <div id="chatInputWrapper">
+                <input type="text" id="chatInput" placeholder="Type a message..." maxlength="200">
+                <button id="chatSendBtn" onclick="sendChatMessage()">Send</button>
+            </div>
+        </div>
     </div>
 
     <div id="gameWrapper">
@@ -216,9 +404,11 @@
         const FORCEFIELD_DURATION = 5000;
         const INTERPOLATION_SPEED = 0.3;
 
+        let currentChatTab = 'global';
+
         debug('Script loaded', 'status');
 
-        // Load or prompt for username
+        // Load or prompt for username (now persistent)
         username = localStorage.getItem('tmaUsername');
         if (!username) {
             debug('No username found, prompting...', 'status');
@@ -288,6 +478,7 @@
                     playerTargets.set(data.player.id, { y: data.player.y, displayY: data.player.y });
                     debug(players.size + ' players', 'players');
                     updatePlayerList();
+                    addSystemMessage(`${data.player.username} joined the game`);
                 } else if (data.type === 'playerUpdate') {
                     if (data.player.id !== myPlayerId) {
                         players.set(data.player.id, data.player);
@@ -305,10 +496,25 @@
                     }
                 } else if (data.type === 'playerLeft') {
                     console.log('👋 Player left:', data.playerId);
+                    const leftPlayer = players.get(data.playerId);
+                    if (leftPlayer) {
+                        addSystemMessage(`${leftPlayer.username} left the game`);
+                    }
                     players.delete(data.playerId);
                     playerTargets.delete(data.playerId);
                     debug(players.size + ' players', 'players');
                     updatePlayerList();
+                } else if (data.type === 'chatMessage') {
+                    addChatMessage(data.sender, data.message, false);
+                } else if (data.type === 'dmMessage') {
+                    addChatMessage(data.sender, data.message, true);
+                } else if (data.type === 'usernameChanged') {
+                    const p = players.get(data.playerId);
+                    if (p) {
+                        addSystemMessage(`${p.username} changed their name to ${data.newUsername}`);
+                        p.username = data.newUsername;
+                        updatePlayerList();
+                    }
                 }
             };
 
@@ -328,9 +534,16 @@
 
             canvas.addEventListener('click', jump);
             document.addEventListener('keydown', (e) => {
-                if (e.code === 'Space') {
+                if (e.code === 'Space' && document.activeElement.id !== 'chatInput' && document.activeElement.id !== 'dmTargetInput') {
                     e.preventDefault();
                     jump();
+                }
+            });
+
+            // Chat input enter key
+            document.getElementById('chatInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    sendChatMessage();
                 }
             });
 
@@ -507,10 +720,15 @@
                 if (id !== myPlayerId && p.isAlive && p.hasStarted) {
                     const target = playerTargets.get(id);
                     const displayY = target ? target.displayY : p.y;
+                    
+                    // Make other players semi-transparent
+                    ctx.globalAlpha = 0.4;
                     drawBird(BIRD_X, displayY, '#0074D9', '#0056A3', false);
-                    ctx.fillStyle = '#000';
+                    ctx.globalAlpha = 1.0; // Reset opacity
+                    
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
                     ctx.font = '12px Arial';
-                    ctx.strokeStyle = '#FFF';
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
                     ctx.lineWidth = 2;
                     ctx.strokeText(p.username, BIRD_X, displayY - 8);
                     ctx.fillText(p.username, BIRD_X, displayY - 8);
@@ -621,7 +839,140 @@
                 container.appendChild(div);
             });
         }
+
+        // Chat functions
+        function switchChatTab(tab) {
+            currentChatTab = tab;
+            document.querySelectorAll('.chat-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (tab === 'dm') {
+                document.getElementById('dmTargetInput').style.display = 'block';
+                document.getElementById('chatInput').placeholder = 'Type a DM...';
+            } else {
+                document.getElementById('dmTargetInput').style.display = 'none';
+                document.getElementById('chatInput').placeholder = 'Type a message...';
+            }
+        }
+
+        function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            if (currentChatTab === 'dm') {
+                const targetInput = document.getElementById('dmTargetInput');
+                const targetUsername = targetInput.value.trim();
+                
+                if (!targetUsername) {
+                    alert('Please enter a username to DM');
+                    return;
+                }
+                
+                // Send DM
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({
+                        type: 'dm',
+                        targetUsername: targetUsername,
+                        message: message
+                    }));
+                    addChatMessage(`You → ${targetUsername}`, message, true);
+                }
+            } else {
+                // Send global message
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({
+                        type: 'chat',
+                        message: message
+                    }));
+                }
+            }
+            
+            input.value = '';
+        }
+
+        function addChatMessage(sender, message, isDM) {
+            const container = document.getElementById('chatMessages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'chat-message' + (isDM ? ' dm' : '');
+            
+            const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            
+            msgDiv.innerHTML = `
+                <div class="chat-sender">${sender}</div>
+                <div class="chat-text">${escapeHtml(message)}</div>
+                <div class="chat-timestamp">${time}</div>
+            `;
+            
+            container.appendChild(msgDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function addSystemMessage(message) {
+            const container = document.getElementById('chatMessages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'chat-message system';
+            
+            const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            
+            msgDiv.innerHTML = `
+                <div class="chat-text">${escapeHtml(message)}</div>
+                <div class="chat-timestamp">${time}</div>
+            `;
+            
+            container.appendChild(msgDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Username editing functions
+        function openUsernameModal() {
+            document.getElementById('modalOverlay').style.display = 'block';
+            document.getElementById('usernameEditModal').style.display = 'block';
+            document.getElementById('newUsernameInput').value = username;
+            document.getElementById('newUsernameInput').focus();
+        }
+
+        function closeUsernameModal() {
+            document.getElementById('modalOverlay').style.display = 'none';
+            document.getElementById('usernameEditModal').style.display = 'none';
+        }
+
+        function saveNewUsername() {
+            const newUsername = document.getElementById('newUsernameInput').value.trim();
+            
+            if (!newUsername) {
+                alert('Username cannot be empty!');
+                return;
+            }
+            
+            if (newUsername === username) {
+                closeUsernameModal();
+                return;
+            }
+            
+            // Update locally
+            const oldUsername = username;
+            username = newUsername;
+            localStorage.setItem('tmaUsername', newUsername);
+            
+            // Notify server
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'changeUsername',
+                    newUsername: newUsername
+                }));
+            }
+            
+            addSystemMessage(`You changed your name from ${oldUsername} to ${newUsername}`);
+            closeUsernameModal();
+        }
     </script>
-    <script src="/chat.js"></script>
 </body>
 </html>
