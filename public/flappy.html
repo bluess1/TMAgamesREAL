@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TMAGames - Flappy Bird Multiplayer</title>
     <style>
-        /* Same styles as your original index.html */
         * {
             margin: 0;
             padding: 0;
@@ -120,9 +119,44 @@
             0%, 100% { transform: translate(-50%, -50%) scale(1); }
             50% { transform: translate(-50%, -50%) scale(1.05); }
         }
+        button {
+            padding: 12px 24px;
+            margin: 5px;
+            background: #2b6cb0;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #2c5282;
+        }
+        #debugInfo {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: lime;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-width: 300px;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
+    <div id="debugInfo">
+        <div>🔍 DEBUG INFO:</div>
+        <div id="debugStatus">Initializing...</div>
+        <div id="debugConnection">Connection: Not started</div>
+        <div id="debugPlayers">Players: 0</div>
+        <div id="debugPipes">Pipes: 0</div>
+    </div>
+
     <div id="gameWrapper">
         <div id="gameContainer">
             <div id="gameInfo">
@@ -152,6 +186,13 @@
     </div>
 
     <script>
+        // DEBUG FUNCTION
+        function debug(msg, type = 'status') {
+            console.log(`[DEBUG ${type}]`, msg);
+            const el = document.getElementById('debug' + type.charAt(0).toUpperCase() + type.slice(1));
+            if (el) el.textContent = type + ': ' + msg;
+        }
+
         let socket;
         let username;
         let canvas, ctx;
@@ -175,52 +216,77 @@
         const FORCEFIELD_DURATION = 5000;
         const INTERPOLATION_SPEED = 0.3;
 
-        // Load username from localStorage
+        debug('Script loaded', 'status');
+
+        // Load or prompt for username
         username = localStorage.getItem('tmaUsername');
         if (!username) {
-            alert('No username found! Returning to menu.');
-            window.location.href = '/';
-            return;
+            debug('No username found, prompting...', 'status');
+            username = prompt('Enter your username:');
+            if (!username) {
+                username = 'Player' + Math.floor(Math.random() * 1000);
+            }
+            localStorage.setItem('tmaUsername', username);
         }
+        debug('Username: ' + username, 'status');
 
         // Start game automatically
         window.onload = () => {
+            debug('Window loaded', 'status');
             document.getElementById('gameWrapper').style.display = 'block';
             canvas = document.getElementById('gameCanvas');
             ctx = canvas.getContext('2d');
 
-            // WebSocket URL for Railway
-            const wsUrl = window.location.hostname === 'localhost' 
-                ? 'ws://localhost:3000/flappy' 
-                : `wss://${window.location.host}/flappy`;
-            console.log('🔌 Connecting to:', wsUrl);
+            // WebSocket URL
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/flappy`;
+            
+            debug('Connecting to: ' + wsUrl, 'connection');
+            console.log('🔌 Full WebSocket URL:', wsUrl);
+            console.log('📍 Location:', {
+                protocol: window.location.protocol,
+                host: window.location.host,
+                hostname: window.location.hostname,
+                port: window.location.port
+            });
+
             socket = new WebSocket(wsUrl);
 
             socket.onopen = () => {
-                console.log('✅ Connected to server');
+                console.log('✅ WebSocket CONNECTED!');
+                debug('CONNECTED!', 'connection');
                 socket.send(JSON.stringify({
                     type: 'join',
                     username: username
                 }));
+                console.log('📤 Sent join message');
             };
 
             socket.onmessage = (event) => {
                 const data = JSON.parse(event.data);
+                console.log('📥 Received:', data.type, data);
+                
                 if (data.type === 'init') {
-                    console.log('🎮 Game initialized - pipes:', data.pipes.length);
+                    debug('Game initialized!', 'status');
+                    console.log('🎮 Game initialized - Player ID:', data.playerId);
                     myPlayerId = data.playerId;
                     data.players.forEach(p => {
                         players.set(p.id, p);
                         playerTargets.set(p.id, { y: p.y, displayY: p.y });
                     });
                     pipes = data.pipes || [];
+                    debug(players.size + ' players', 'players');
+                    debug(pipes.length + ' pipes', 'pipes');
                     updatePlayerList();
                     startGameLoop();
                 } else if (data.type === 'pipeUpdate') {
                     pipes = data.pipes;
+                    debug(pipes.length + ' pipes', 'pipes');
                 } else if (data.type === 'playerJoined') {
+                    console.log('👤 Player joined:', data.player.username);
                     players.set(data.player.id, data.player);
                     playerTargets.set(data.player.id, { y: data.player.y, displayY: data.player.y });
+                    debug(players.size + ' players', 'players');
                     updatePlayerList();
                 } else if (data.type === 'playerUpdate') {
                     if (data.player.id !== myPlayerId) {
@@ -238,21 +304,26 @@
                         updatePlayerList();
                     }
                 } else if (data.type === 'playerLeft') {
+                    console.log('👋 Player left:', data.playerId);
                     players.delete(data.playerId);
                     playerTargets.delete(data.playerId);
+                    debug(players.size + ' players', 'players');
                     updatePlayerList();
                 }
             };
 
             socket.onerror = (error) => {
-                console.error('❌ WebSocket error:', error);
-                alert('Connection failed! Please refresh and try again.');
+                console.error('❌ WebSocket ERROR:', error);
+                debug('ERROR! Check console', 'connection');
+                alert('Connection failed! Check the console (F12) for details.');
             };
 
             socket.onclose = (event) => {
-                console.log('🔌 Disconnected:', event.code, event.reason);
-                alert('Connection lost! Returning to menu.');
-                window.location.href = '/';
+                console.log('🔌 WebSocket CLOSED:', event.code, event.reason);
+                debug('Disconnected: ' + event.code, 'connection');
+                if (event.code !== 1000) {
+                    alert('Connection lost! Code: ' + event.code);
+                }
             };
 
             canvas.addEventListener('click', jump);
@@ -262,6 +333,8 @@
                     jump();
                 }
             });
+
+            debug('Setup complete!', 'status');
         };
 
         function backToMenu() {
@@ -276,10 +349,12 @@
         }
 
         function jump() {
+            console.log('🐦 Jump!');
             if (!player.hasStarted) {
                 player.hasStarted = true;
                 document.getElementById('startPrompt').style.display = 'none';
                 activateForceField();
+                debug('Game started!', 'status');
             }
             if (player.isAlive && player.hasStarted) {
                 player.velocity = JUMP_STRENGTH;
@@ -289,18 +364,22 @@
         function activateForceField() {
             hasForceField = true;
             forceFieldEndTime = Date.now() + FORCEFIELD_DURATION;
+            console.log('🛡️ Force field activated!');
         }
 
         function checkForceField() {
             if (hasForceField && Date.now() >= forceFieldEndTime) {
                 hasForceField = false;
+                console.log('🛡️ Force field ended');
             }
             return hasForceField;
         }
 
         let updateCounter = 0;
         function startGameLoop() {
-            console.log('🚀 Game loop started!');
+            console.log('🚀 Game loop STARTED!');
+            debug('Game loop running', 'status');
+            
             function loop() {
                 players.forEach((p, id) => {
                     if (id !== myPlayerId && playerTargets.has(id)) {
@@ -331,6 +410,7 @@
                         if (!passedPipes.has(pipe.id) && pipe.x + 60 < BIRD_X) {
                             passedPipes.add(pipe.id);
                             score++;
+                            console.log('⭐ Score:', score);
                             document.getElementById('score').textContent = score;
                             if (socket && socket.readyState === WebSocket.OPEN) {
                                 socket.send(JSON.stringify({
@@ -492,6 +572,7 @@
         }
 
         function die() {
+            console.log('💀 Player died');
             player.isAlive = false;
             isGameOver = true;
             document.getElementById('gameOver').style.display = 'block';
@@ -508,6 +589,7 @@
         }
 
         function restartGame() {
+            console.log('🔄 Restarting game');
             player = { y: 250, velocity: 0, isAlive: true, hasStarted: false };
             score = 0;
             isGameOver = false;
