@@ -1,0 +1,39 @@
+const express = require('express');
+const { Server } = require('ws');
+const path = require('path');
+const flappyServer = require('./servers/flappy-server');
+const newGameServer = require('./servers/new-game-server');
+
+const app = express();
+
+// Serve static files
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Catch-all for SPA
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Start HTTP server
+const PORT = process.env.PORT || 3000;
+const server = app.listen(PORT, () => {
+  console.log(`🚀 Game Hub server running on port ${PORT}`);
+});
+
+// Handle WebSocket upgrades for multiple games
+server.on('upgrade', (request, socket, head) => {
+  const pathname = request.url;
+  if (pathname === '/flappy') {
+    flappyServer.wssFlappy.handleUpgrade(request, socket, head, (ws) => {
+      flappyServer.wssFlappy.emit('connection', ws, request);
+    });
+  } else if (pathname === '/new-game') {
+    newGameServer.wssNewGame.handleUpgrade(request, socket, head, (ws) => {
+      newGameServer.wssNewGame.emit('connection', ws, request);
+    });
+  } else {
+    socket.destroy();
+  }
+});
+
+console.log('Game Hub ready with Flappy Bird and New Game servers!');
