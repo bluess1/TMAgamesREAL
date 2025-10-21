@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TMAGames - Flappy Bird Multiplayer</title>
+    <title>TMAGames - Game Hub</title>
     <style>
         * {
             margin: 0;
@@ -26,16 +26,15 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             max-width: 400px;
             width: 90%;
+            text-align: center;
         }
         h1 {
             color: #2b6cb0;
-            text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 20px;
             font-size: 2.5em;
         }
         h2 {
             color: #4a5568;
-            text-align: center;
             margin-bottom: 30px;
         }
         input {
@@ -57,6 +56,7 @@
             font-weight: bold;
             cursor: pointer;
             transition: background 0.3s;
+            margin-bottom: 10px;
         }
         button:hover {
             background: #2c5282;
@@ -67,539 +67,34 @@
             color: #4a5568;
             font-size: 14px;
         }
-        #gameWrapper {
-            display: none;
-            position: fixed;
-            width: 100vw;
-            height: 100vh;
-            top: 0;
-            left: 0;
-        }
-        #gameContainer {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100%;
-            position: relative;
-        }
-        #gameInfo {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 20px;
-            z-index: 10;
-        }
-        .info-box {
-            background: white;
-            padding: 15px 25px;
-            border-radius: 10px;
-            font-weight: bold;
-        }
-        canvas {
-            border: 4px solid white;
-            border-radius: 10px;
-            cursor: pointer;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            display: block;
-        }
-        #gameOver {
-            display: none;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 40px 60px;
-            border-radius: 15px;
-            text-align: center;
-            z-index: 100;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-        }
-        #playerList {
-            position: absolute;
-            left: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(255,255,255,0.95);
-            padding: 20px;
-            border-radius: 10px;
-            max-width: 250px;
-            width: 250px;
-            max-height: 500px;
-            overflow-y: auto;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        }
-        .player-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        .player-you {
-            font-weight: bold;
-            color: #e53e3e;
-        }
-        #startPrompt {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(255,255,255,0.95);
-            padding: 30px 50px;
-            border-radius: 15px;
-            text-align: center;
-            font-size: 24px;
-            font-weight: bold;
-            color: #2b6cb0;
-            z-index: 50;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            animation: pulse 2s infinite;
-        }
-        #startPrompt .shield-notice {
-            font-size: 16px;
-            color: #00BFFF;
-            margin-top: 10px;
-            font-weight: normal;
-        }
-        @keyframes pulse {
-            0%, 100% { transform: translate(-50%, -50%) scale(1); }
-            50% { transform: translate(-50%, -50%) scale(1.05); }
-        }
     </style>
 </head>
 <body>
     <div id="menu">
         <h1>TMAGames</h1>
-        <h2>Flappy Bird Multiplayer</h2>
+        <h2>Choose a Game</h2>
         <label style="display: block; margin-bottom: 10px; font-weight: bold;">Enter Username</label>
         <input type="text" id="usernameInput" placeholder="Your username..." maxlength="15">
-        <button onclick="startGame()">Start Game</button>
+        <button onclick="selectGame('flappy')">Play Flappy Bird Multiplayer</button>
+        <button onclick="selectGame('new-game')">Play New Game (Coming Soon)</button>
         <div class="instructions">
-            <p><strong>How to Play:</strong></p>
-            <p>Press SPACE or CLICK to flap</p>
-            <p>Avoid the pipes!</p>
-            <p>See other players in real-time</p>
-        </div>
-    </div>
-
-    <div id="gameWrapper">
-        <div id="gameContainer">
-            <div id="gameInfo">
-                <div class="info-box">
-                    <span id="playerCount">0</span> Players Online
-                </div>
-                <div class="info-box">
-                    Score: <span id="score">0</span>
-                </div>
-            </div>
-            
-            <!-- ✅ FIXED: 800x600 canvas -->
-            <canvas id="gameCanvas" width="800" height="600"></canvas>
-            
-            <div id="startPrompt">
-                Press SPACE to Start!
-                <div class="shield-notice">🛡️ 5 Second Shield Active!</div>
-            </div>
-            
-            <div id="gameOver">
-                <h2 style="margin-bottom: 15px; font-size: 32px;">Game Over!</h2>
-                <p style="font-size: 24px; margin: 20px 0;">Final Score: <span id="finalScore">0</span></p>
-                <button onclick="restartGame()">Play Again</button>
-            </div>
-            
-            <div id="playerList">
-                <h3 style="margin-bottom: 15px;">Players Online</h3>
-                <div id="playersContainer"></div>
-            </div>
+            <p><strong>Welcome to TMAGames!</strong></p>
+            <p>Enter a username and select a game to start playing.</p>
+            <p>Flappy Bird: Press SPACE or CLICK to flap, avoid pipes!</p>
         </div>
     </div>
 
     <script>
-        let socket;
-        let username;
-        let canvas, ctx;
-        let gameLoop;
-        let player = { y: 250, velocity: 0, isAlive: true, hasStarted: false };
-        let pipes = [];
-        let score = 0;
-        let players = new Map();
-        let playerTargets = new Map();
-        let isGameOver = false;
-        let myPlayerId = null;
-        let passedPipes = new Set();
-        let lastScoreUpdate = 0;
-        let hasForceField = false;
-        let forceFieldEndTime = 0;
-
-        const GRAVITY = 0.5;
-        const JUMP_STRENGTH = -8;
-        const BIRD_SIZE = 30;
-        const BIRD_X = 50;
-        const FORCEFIELD_DURATION = 5000;
-        const INTERPOLATION_SPEED = 0.3;
-
-        function startGame() {
-            username = document.getElementById('usernameInput').value.trim();
+        function selectGame(game) {
+            const username = document.getElementById('usernameInput').value.trim();
             if (!username) {
                 alert('Please enter a username!');
                 return;
             }
-
-            document.getElementById('menu').style.display = 'none';
-            document.getElementById('gameWrapper').style.display = 'block';
-            
-            canvas = document.getElementById('gameCanvas');
-            ctx = canvas.getContext('2d');
-
-            // 🔥 FIXED WEBSOCKET URL FOR VERCEL + LOCALHOST
-const wsUrl = window.location.hostname === 'localhost' 
-  ? 'ws://localhost:3000' 
-  : `wss://${window.location.host}`; // Railway uses same host for WS
-console.log('🔌 Connecting to:', wsUrl);
-socket = new WebSocket(wsUrl);
-            
-            console.log('🔌 Connecting to:', wsUrl);
-            
-            socket = new WebSocket(wsUrl);
-
-            socket.onopen = () => {
-                console.log('✅ Connected to server');
-                socket.send(JSON.stringify({
-                    type: 'join',
-                    username: username
-                }));
-            };
-
-            socket.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                
-                if (data.type === 'init') {
-                    console.log('🎮 Game initialized - pipes:', data.pipes.length);
-                    myPlayerId = data.playerId;
-                    data.players.forEach(p => {
-                        players.set(p.id, p);
-                        playerTargets.set(p.id, { y: p.y, displayY: p.y });
-                    });
-                    pipes = data.pipes || [];
-                    updatePlayerList();
-                    startGameLoop();
-                } else if (data.type === 'pipeUpdate') {
-                    pipes = data.pipes;
-                } else if (data.type === 'playerJoined') {
-                    players.set(data.player.id, data.player);
-                    playerTargets.set(data.player.id, { y: data.player.y, displayY: data.player.y });
-                    updatePlayerList();
-                } else if (data.type === 'playerUpdate') {
-                    if (data.player.id !== myPlayerId) {
-                        players.set(data.player.id, data.player);
-                        if (!playerTargets.has(data.player.id)) {
-                            playerTargets.set(data.player.id, { y: data.player.y, displayY: data.player.y });
-                        } else {
-                            playerTargets.get(data.player.id).y = data.player.y;
-                        }
-                    }
-                } else if (data.type === 'scoreUpdate') {
-                    const p = players.get(data.playerId);
-                    if (p) {
-                        p.score = data.score;
-                        updatePlayerList();
-                    }
-                } else if (data.type === 'playerLeft') {
-                    players.delete(data.playerId);
-                    playerTargets.delete(data.playerId);
-                    updatePlayerList();
-                }
-            };
-
-            socket.onerror = (error) => {
-                console.error('❌ WebSocket error:', error);
-                alert('Connection failed! Please refresh and try again.');
-            };
-
-            socket.onclose = (event) => {
-                console.log('🔌 Disconnected:', event.code, event.reason);
-            };
-
-            canvas.addEventListener('click', jump);
-            document.addEventListener('keydown', (e) => {
-                if (e.code === 'Space') {
-                    e.preventDefault();
-                    jump();
-                }
-            });
-        }
-
-        function jump() {
-            if (!player.hasStarted) {
-                player.hasStarted = true;
-                document.getElementById('startPrompt').style.display = 'none';
-                activateForceField();
-            }
-            if (player.isAlive && player.hasStarted) {
-                player.velocity = JUMP_STRENGTH;
-            }
-        }
-
-        function activateForceField() {
-            hasForceField = true;
-            forceFieldEndTime = Date.now() + FORCEFIELD_DURATION;
-        }
-
-        function checkForceField() {
-            if (hasForceField && Date.now() >= forceFieldEndTime) {
-                hasForceField = false;
-            }
-            return hasForceField;
-        }
-
-        let updateCounter = 0;
-        function startGameLoop() {
-            console.log('🚀 Game loop started!');
-            function loop() {
-                players.forEach((p, id) => {
-                    if (id !== myPlayerId && playerTargets.has(id)) {
-                        const target = playerTargets.get(id);
-                        target.displayY += (target.y - target.displayY) * INTERPOLATION_SPEED;
-                    }
-                });
-
-                checkForceField();
-
-                if (player.hasStarted && player.isAlive) {
-                    player.velocity += GRAVITY;
-                    player.y += player.velocity;
-
-                    if (player.y < 0 || player.y > canvas.height - BIRD_SIZE) {
-                        die();
-                    }
-
-                    pipes.forEach(pipe => {
-                        if (!hasForceField) {
-                            if (pipe.x < BIRD_X + BIRD_SIZE && pipe.x + 60 > BIRD_X) {
-                                if (player.y < pipe.topHeight || player.y + BIRD_SIZE > pipe.bottomY) {
-                                    die();
-                                }
-                            }
-                        }
-
-                        if (!passedPipes.has(pipe.id) && pipe.x + 60 < BIRD_X) {
-                            passedPipes.add(pipe.id);
-                            score++;
-                            document.getElementById('score').textContent = score;
-                            
-                            if (socket && socket.readyState === WebSocket.OPEN) {
-                                socket.send(JSON.stringify({
-                                    type: 'scoreUpdate',
-                                    score: score
-                                }));
-                            }
-                        }
-                    });
-                }
-
-                updateCounter++;
-                if (updateCounter % 2 === 0 && socket && socket.readyState === WebSocket.OPEN) {
-                    socket.send(JSON.stringify({
-                        type: 'update',
-                        y: player.y,
-                        score: score,
-                        isAlive: player.isAlive,
-                        hasStarted: player.hasStarted
-                    }));
-                }
-
-                draw();
-                gameLoop = requestAnimationFrame(loop);
-            }
-            loop();
-        }
-
-        function draw() {
-            const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            skyGradient.addColorStop(0, '#87CEEB');
-            skyGradient.addColorStop(1, '#E0F6FF');
-            ctx.fillStyle = skyGradient;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-            const cloudOffset = (Date.now() / 50) % 900;
-            drawCloud(100 - cloudOffset, 80);
-            drawCloud(400 - cloudOffset, 120);
-            drawCloud(700 - cloudOffset, 60);
-
-            ctx.fillStyle = '#DEB887';
-            ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
-            ctx.fillStyle = '#228B22';
-            ctx.fillRect(0, canvas.height - 55, canvas.width, 5);
-
-            pipes.forEach(pipe => {
-                const topGradient = ctx.createLinearGradient(pipe.x, 0, pipe.x + 60, 0);
-                topGradient.addColorStop(0, '#2ECC40');
-                topGradient.addColorStop(0.5, '#3FDD51');
-                topGradient.addColorStop(1, '#1EA030');
-                ctx.fillStyle = topGradient;
-                ctx.fillRect(pipe.x, 0, 60, pipe.topHeight);
-                
-                ctx.fillStyle = '#25A033';
-                ctx.fillRect(pipe.x - 3, pipe.topHeight - 25, 66, 25);
-                
-                const bottomGradient = ctx.createLinearGradient(pipe.x, 0, pipe.x + 60, 0);
-                bottomGradient.addColorStop(0, '#2ECC40');
-                bottomGradient.addColorStop(0.5, '#3FDD51');
-                bottomGradient.addColorStop(1, '#1EA030');
-                ctx.fillStyle = bottomGradient;
-                ctx.fillRect(pipe.x, pipe.bottomY, 60, canvas.height - pipe.bottomY);
-                
-                ctx.fillStyle = '#25A033';
-                ctx.fillRect(pipe.x - 3, pipe.bottomY, 66, 25);
-
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-                ctx.fillRect(pipe.x + 5, 0, 8, pipe.topHeight);
-                ctx.fillRect(pipe.x + 5, pipe.bottomY, 8, canvas.height - pipe.bottomY);
-            });
-
-            drawBird(BIRD_X, player.y, '#FF4136', '#C70000', hasForceField);
-            
-            ctx.fillStyle = '#000';
-            ctx.font = 'bold 12px Arial';
-            ctx.strokeStyle = '#FFF';
-            ctx.lineWidth = 3;
-            ctx.strokeText(username, BIRD_X, player.y - 12);
-            ctx.fillText(username, BIRD_X, player.y - 12);
-
-            if (hasForceField) {
-                const timeLeft = Math.ceil((forceFieldEndTime - Date.now()) / 1000);
-                ctx.fillStyle = 'rgba(0, 191, 255, 0.8)';
-                ctx.font = 'bold 16px Arial';
-                ctx.strokeStyle = '#FFF';
-                ctx.lineWidth = 3;
-                const text = `Shield: ${timeLeft}s`;
-                ctx.strokeText(text, BIRD_X - 5, player.y + 50);
-                ctx.fillText(text, BIRD_X - 5, player.y + 50);
-            }
-
-            players.forEach((p, id) => {
-                if (id !== myPlayerId && p.isAlive && p.hasStarted) {
-                    const target = playerTargets.get(id);
-                    const displayY = target ? target.displayY : p.y;
-                    drawBird(BIRD_X, displayY, '#0074D9', '#0056A3', false);
-                    ctx.fillStyle = '#000';
-                    ctx.font = '12px Arial';
-                    ctx.strokeStyle = '#FFF';
-                    ctx.lineWidth = 2;
-                    ctx.strokeText(p.username, BIRD_X, displayY - 8);
-                    ctx.fillText(p.username, BIRD_X, displayY - 8);
-                }
-            });
-        }
-
-        function drawBird(x, y, bodyColor, darkColor, shield) {
-            if (shield) {
-                const pulseSize = 5 + Math.sin(Date.now() / 100) * 3;
-                ctx.strokeStyle = 'rgba(0, 191, 255, 0.8)';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.arc(x + BIRD_SIZE/2, y + BIRD_SIZE/2, BIRD_SIZE/2 + pulseSize, 0, Math.PI * 2);
-                ctx.stroke();
-                
-                ctx.strokeStyle = 'rgba(0, 191, 255, 0.4)';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.arc(x + BIRD_SIZE/2, y + BIRD_SIZE/2, BIRD_SIZE/2 + pulseSize + 5, 0, Math.PI * 2);
-                ctx.stroke();
-            }
-
-            ctx.fillStyle = bodyColor;
-            ctx.beginPath();
-            ctx.arc(x + BIRD_SIZE/2, y + BIRD_SIZE/2, BIRD_SIZE/2, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = darkColor;
-            ctx.beginPath();
-            ctx.ellipse(x + BIRD_SIZE/2, y + BIRD_SIZE/2 + 5, 8, 6, Math.PI/6, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = '#FFF';
-            ctx.beginPath();
-            ctx.arc(x + BIRD_SIZE/2 + 8, y + BIRD_SIZE/2 - 3, 5, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = '#000';
-            ctx.beginPath();
-            ctx.arc(x + BIRD_SIZE/2 + 10, y + BIRD_SIZE/2 - 3, 3, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = '#FFA500';
-            ctx.beginPath();
-            ctx.moveTo(x + BIRD_SIZE/2 + 12, y + BIRD_SIZE/2 + 3);
-            ctx.lineTo(x + BIRD_SIZE/2 + 20, y + BIRD_SIZE/2 + 3);
-            ctx.lineTo(x + BIRD_SIZE/2 + 12, y + BIRD_SIZE/2 + 8);
-            ctx.fill();
-        }
-
-        function drawCloud(x, y) {
-            ctx.beginPath();
-            ctx.arc(x, y, 20, 0, Math.PI * 2);
-            ctx.arc(x + 25, y, 25, 0, Math.PI * 2);
-            ctx.arc(x + 50, y, 20, 0, Math.PI * 2);
-            ctx.arc(x + 25, y - 15, 18, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        function die() {
-            player.isAlive = false;
-            isGameOver = true;
-            document.getElementById('gameOver').style.display = 'block';
-            document.getElementById('finalScore').textContent = score;
-            
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({
-                    type: 'update',
-                    y: player.y,
-                    score: score,
-                    isAlive: false,
-                    hasStarted: player.hasStarted
-                }));
-            }
-        }
-
-        function restartGame() {
-            player = { y: 250, velocity: 0, isAlive: true, hasStarted: false };
-            score = 0;
-            isGameOver = false;
-            passedPipes.clear();
-            hasForceField = false;
-            forceFieldEndTime = 0;
-            document.getElementById('score').textContent = 0;
-            document.getElementById('gameOver').style.display = 'none';
-            document.getElementById('startPrompt').style.display = 'block';
-        }
-
-        function updatePlayerList() {
-            const playerArray = Array.from(players.values());
-            playerArray.sort((a, b) => b.score - a.score);
-            
-            document.getElementById('playerCount').textContent = playerArray.length;
-            const container = document.getElementById('playersContainer');
-            container.innerHTML = '';
-            
-            playerArray.forEach((p, index) => {
-                const div = document.createElement('div');
-                div.className = 'player-item';
-                if (p.id === myPlayerId) {
-                    div.classList.add('player-you');
-                }
-                
-                const medal = index === 0 ? '🥇 ' : index === 1 ? '🥈 ' : index === 2 ? '🥉 ' : '';
-                
-                div.innerHTML = `
-                    <span>${medal}${p.username}${p.id === myPlayerId ? ' (You)' : ''}</span>
-                    <span><strong>${p.score}</strong></span>
-                `;
-                container.appendChild(div);
-            });
+            // Store username in localStorage for games to access
+            localStorage.setItem('tmaUsername', username);
+            // Redirect to selected game
+            window.location.href = game === 'flappy' ? '/flappy.html' : '/new-game.html';
         }
     </script>
 </body>
