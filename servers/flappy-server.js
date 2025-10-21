@@ -6,27 +6,37 @@ const path = require('path');
 const app = express();
 
 // Serve static files from public folder
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // Catch-all to serve index.html for client-side routing
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
 
-// Start HTTP server with Railway's PORT
+// Start HTTP server
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {
-  console.log(`🚀 Flappy Bird server running on port ${PORT}`);
+  console.log(`🚀 Game Hub server running on port ${PORT}`);
 });
 
-// WebSocket server (simplified for Railway)
-const wss = new WebSocket.Server({ server });
+// WebSocket server for Flappy Bird (/flappy)
+const wssFlappy = new WebSocket.Server({ noServer: true });
 
-// Store connected players
-const players = new Map();
+// Handle WebSocket upgrades
+server.on('upgrade', (request, socket, head) => {
+  const pathname = request.url;
+  if (pathname === '/flappy') {
+    wssFlappy.handleUpgrade(request, socket, head, (ws) => {
+      wssFlappy.emit('connection', ws, request);
+    });
+  } else {
+    socket.destroy();
+  }
+});
 
-// Shared game state - synchronized pipes for all players
-let gameState = {
+// Flappy Bird game state
+const flappyPlayers = new Map();
+let flappyGameState = {
   pipes: [],
   frameCount: 0,
   lastUpdate: Date.now(),
@@ -41,32 +51,32 @@ const PIPE_GAP = 150;
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 600;
 
-// Update pipes on server side
+// Update pipes for Flappy Bird
 function updatePipes() {
   let anyPlayerStarted = false;
-  players.forEach(player => {
+  flappyPlayers.forEach(player => {
     if (player.hasStarted) {
       anyPlayerStarted = true;
     }
   });
 
   if (!anyPlayerStarted) {
-    gameState.gameStarted = false;
-    gameState.pipes = [];
-    gameState.frameCount = 0;
+    flappyGameState.gameStarted = false;
+    flappyGameState.pipes = [];
+    flappyGameState.frameCount = 0;
     return;
   }
 
-  if (!gameState.gameStarted) {
-    gameState.gameStarted = true;
-    gameState.frameCount = 0;
-    gameState.pipes = [];
+  if (!flappyGameState.gameStarted) {
+    flappyGameState.gameStarted = true;
+    flappyGameState.frameCount = 0;
+    flappyGameState.pipes = [];
   }
 
-  gameState.frameCount++;
-  if (gameState.frameCount % PIPE_SPAWN_INTERVAL === 0) {
+  flappyGameState.frameCount++;
+  if (flappyGameState.frameCount % PIPE_SPAWN_INTERVAL === 0) {
     const pipeHeight = Math.random() * (CANVAS_HEIGHT - PIPE_GAP - 100) + 50;
-    gameState.pipes.push({
+    flappyGameState.pipes.push({
       id: generateId(),
       x: CANVAS_WIDTH,
       topHeight: pipeHeight,
@@ -74,36 +84,35 @@ function updatePipes() {
     });
   }
 
-  gameState.pipes = gameState.pipes.filter(pipe => pipe.x > -PIPE_WIDTH);
-  gameState.pipes.forEach(pipe => {
+  flappyGameState.pipes = flappyGameState.pipes.filter(pipe => pipe.x > -PIPE_WIDTH);
+  flappyGameState.pipes.forEach(pipe => {
     pipe.x -= PIPE_SPEED;
   });
 }
 
-// Game loop
+// Game loop for Flappy Bird
 let lastBroadcast = Date.now();
 setInterval(() => {
   updatePipes();
-  
   const now = Date.now();
   if (now - lastBroadcast >= 16) {
     lastBroadcast = now;
-    broadcast({
+    broadcastFlappy({
       type: 'pipeUpdate',
-      pipes: gameState.pipes
+      pipes: flappyGameState.pipes
     });
   }
 }, 16);
 
-// WebSocket connection handler
-wss.on('connection', (ws) => {
-  console.log('New client connected');
+// WebSocket connection handler for Flappy Bird
+wssFlappy.on('connection', (ws) => {
+  console.log('New Flappy Bird client connected');
   
   let playerId = null;
 
   ws.on('message', (message) => {
     try {
-      const data = JSON.parse(message.toString()); // Ensure message is string
+      const data = JSON.parse(message.toString());
 
       switch(data.type) {
         case 'join':
@@ -117,32 +126,32 @@ wss.on('connection', (ws) => {
             hasStarted: false
           };
           
-          players.set(playerId, newPlayer);
+          flappyPlayers.set(playerId, newPlayer);
           
           ws.send(JSON.stringify({
             type: 'init',
             playerId: playerId,
-            players: Array.from(players.values()),
-            pipes: gameState.pipes
+            players: Array.from(flappyPlayers.values()),
+            pipes: flappyGameState.pipes
           }));
 
-          broadcast({
+          broadcastFlappy({
             type: 'playerJoined',
             player: newPlayer
           }, ws);
 
-          console.log(`Player ${data.username} joined (${playerId})`);
+          console.log(`Flappy Bird: Player ${data.username} joined (${playerId})`);
           break;
 
         case 'update':
-          if (playerId && players.has(playerId)) {
-            const player = players.get(playerId);
+          if (playerId && flappyPlayers.has(playerId)) {
+            const player = flappyPlayers.get(playerId);
             player.y = data.y;
             player.score = data.score;
             player.isAlive = data.isAlive;
             player.hasStarted = data.hasStarted;
 
-            broadcast({
+            broadcastFlappy({
               type: 'playerUpdate',
               player: {
                 id: player.id,
@@ -157,11 +166,11 @@ wss.on('connection', (ws) => {
           break;
 
         case 'scoreUpdate':
-          if (playerId && players.has(playerId)) {
-            const player = players.get(playerId);
+          if (playerId && flappyPlayers.has(playerId)) {
+            const player = flappyPlayers.get(playerId);
             player.score = data.score;
             
-            broadcast({
+            broadcastFlappy({
               type: 'scoreUpdate',
               playerId: playerId,
               score: data.score
@@ -170,41 +179,41 @@ wss.on('connection', (ws) => {
           break;
 
         case 'leave':
-          if (playerId && players.has(playerId)) {
-            players.delete(playerId);
-            broadcast({
+          if (playerId && flappyPlayers.has(playerId)) {
+            flappyPlayers.delete(playerId);
+            broadcastFlappy({
               type: 'playerLeft',
               playerId: playerId
             });
-            console.log(`Player left (${playerId})`);
+            console.log(`Flappy Bird: Player left (${playerId})`);
           }
           break;
       }
     } catch (error) {
-      console.error('Error processing message:', error);
+      console.error('Flappy Bird: Error processing message:', error);
     }
   });
 
   ws.on('close', () => {
-    if (playerId && players.has(playerId)) {
-      const username = players.get(playerId).username;
-      players.delete(playerId);
-      broadcast({
+    if (playerId && flappyPlayers.has(playerId)) {
+      const username = flappyPlayers.get(playerId).username;
+      flappyPlayers.delete(playerId);
+      broadcastFlappy({
         type: 'playerLeft',
         playerId: playerId
       });
-      console.log(`Player ${username} disconnected (${playerId})`);
+      console.log(`Flappy Bird: Player ${username} disconnected (${playerId})`);
     }
   });
 
   ws.on('error', (error) => {
-    console.error('WebSocket error:', error);
+    console.error('Flappy Bird: WebSocket error:', error);
   });
 });
 
-function broadcast(data, excludeWs = null) {
+function broadcastFlappy(data, excludeWs = null) {
   const message = JSON.stringify(data);
-  wss.clients.forEach(client => {
+  wssFlappy.clients.forEach(client => {
     if (client !== excludeWs && client.readyState === WebSocket.OPEN) {
       client.send(message);
     }
