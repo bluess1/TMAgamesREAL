@@ -6,18 +6,21 @@ const path = require('path');
 const app = express();
 
 // Serve static files from public folder
-app.use(express.static(path.join(process.cwd(), 'public')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Catch-all to serve index.html for client-side routing
 app.get('*', (req, res) => {
-  res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Export Express app for Vercel serverless
-module.exports = app;
+// Start HTTP server with Railway's PORT
+const PORT = process.env.PORT || 3000;
+const server = app.listen(PORT, () => {
+  console.log(`🚀 Flappy Bird server running on port ${PORT}`);
+});
 
-// WebSocket server setup (Vercel-compatible)
-const server = app.listen(process.env.PORT || 3000);
+// WebSocket server (simplified for Railway)
+const wss = new WebSocket.Server({ server });
 
 // Store connected players
 const players = new Map();
@@ -92,23 +95,7 @@ setInterval(() => {
   }
 }, 16);
 
-// WebSocket server
-const wss = new WebSocket.Server({ 
-  server,
-  // Vercel WebSocket settings
-  perMessageDeflate: {
-    zlibDeflateOptions: {
-      chunkSize: 1024
-    },
-    zlibInflateOptions: {
-      chunkSize: 10 * 1024
-    },
-    clientNoContextTakeover: true,
-    serverNoContextTakeover: true,
-    skipNegotiate: true
-  }
-});
-
+// WebSocket connection handler
 wss.on('connection', (ws) => {
   console.log('New client connected');
   
@@ -116,7 +103,7 @@ wss.on('connection', (ws) => {
 
   ws.on('message', (message) => {
     try {
-      const data = JSON.parse(message);
+      const data = JSON.parse(message.toString()); // Ensure message is string
 
       switch(data.type) {
         case 'join':
