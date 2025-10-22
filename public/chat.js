@@ -278,6 +278,17 @@ class GlobalChat {
 
     handleMessage(data) {
         switch(data.type) {
+            case 'chatHistory':
+                // Load chat history when joining
+                console.log('📜 Loading chat history:', data.messages.length, 'messages');
+                data.messages.forEach(msg => {
+                    if (msg.type === 'chatMessage') {
+                        this.addMessage(msg.sender, msg.message, false, true);
+                    } else if (msg.type === 'systemMessage') {
+                        this.addSystemMessage(msg.message, true);
+                    }
+                });
+                break;
             case 'userCount':
                 document.getElementById('globalOnlineCount').textContent = `${data.count} online`;
                 break;
