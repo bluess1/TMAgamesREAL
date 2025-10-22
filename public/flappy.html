@@ -146,7 +146,120 @@
             max-width: 300px;
             z-index: 1000;
         }
-        
+        #chatBox {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.95);
+            padding: 15px;
+            border-radius: 10px;
+            width: 300px;
+            height: 500px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+        #chatHeader {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #2b6cb0;
+            padding-bottom: 10px;
+        }
+        #chatTabs {
+            display: flex;
+            gap: 5px;
+        }
+        .chat-tab {
+            padding: 5px 10px;
+            background: #e2e8f0;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .chat-tab.active {
+            background: #2b6cb0;
+            color: white;
+        }
+        #chatMessages {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 10px;
+            background: white;
+        }
+        .chat-message {
+            margin-bottom: 8px;
+            padding: 5px 8px;
+            border-radius: 5px;
+            background: #f7fafc;
+            word-wrap: break-word;
+        }
+        .chat-message.dm {
+            background: #e6fffa;
+            border-left: 3px solid #38b2ac;
+        }
+        .chat-message.system {
+            background: #fff5f5;
+            border-left: 3px solid #fc8181;
+            font-style: italic;
+        }
+        .chat-sender {
+            font-weight: bold;
+            color: #2b6cb0;
+            font-size: 12px;
+        }
+        .chat-text {
+            color: #2d3748;
+            font-size: 13px;
+            margin-top: 2px;
+        }
+        .chat-timestamp {
+            font-size: 10px;
+            color: #a0aec0;
+        }
+        #chatInputArea {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        #dmTargetInput {
+            display: none;
+            padding: 5px;
+            border: 2px solid #38b2ac;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+        #chatInputWrapper {
+            display: flex;
+            gap: 5px;
+        }
+        #chatInput {
+            flex: 1;
+            padding: 8px;
+            border: 2px solid #cbd5e0;
+            border-radius: 5px;
+            font-size: 13px;
+        }
+        #chatSendBtn {
+            padding: 8px 15px;
+            background: #2b6cb0;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        #chatSendBtn:hover {
+            background: #2c5282;
+        }
         #usernameEditor {
             position: absolute;
             top: 20px;
@@ -476,11 +589,21 @@
         }
 
         let updateCounter = 0;
+        let lastFrameTime = Date.now();
+        
         function startGameLoop() {
             console.log('🚀 Game loop STARTED!');
             debug('Game loop running', 'status');
             
             function loop() {
+                // Calculate delta time for frame-rate independence
+                const currentTime = Date.now();
+                const deltaTime = (currentTime - lastFrameTime) / 16.67; // Normalize to 60 FPS
+                lastFrameTime = currentTime;
+                
+                // Cap delta time to prevent huge jumps
+                const cappedDelta = Math.min(deltaTime, 2);
+                
                 players.forEach((p, id) => {
                     if (id !== myPlayerId && playerTargets.has(id)) {
                         const target = playerTargets.get(id);
@@ -491,8 +614,8 @@
                 checkForceField();
 
                 if (player.hasStarted && player.isAlive) {
-                    player.velocity += GRAVITY;
-                    player.y += player.velocity;
+                    player.velocity += GRAVITY * cappedDelta;
+                    player.y += player.velocity * cappedDelta;
 
                     if (player.y < 0 || player.y > canvas.height - BIRD_SIZE) {
                         die();
@@ -861,6 +984,5 @@
             closeUsernameModal();
         }
     </script>
-    <script src="/chat.js"></script>
 </body>
 </html>
