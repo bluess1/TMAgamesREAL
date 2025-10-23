@@ -61,37 +61,64 @@
             font-size: 14px;
             color: rgba(255,255,255,0.9);
         }
+        .player-count {
+            font-size: 12px;
+            color: rgba(255,255,255,0.7);
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
     <div class="menu-container">
         <h1>TMAgames, now with TMAchat</h1>
         <p>Welcome! Choose a game to play with friends online</p>
-        
+        <input type="text" id="username" placeholder="Enter your username" style="width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 5px;">
         <div class="games-grid">
-            <a href="/flappy.html" class="game-card">
+            <a href="#" onclick="joinGame('flappy')" class="game-card">
                 <h2>🐦 Flappy Bird</h2>
                 <p>Multiplayer madness!</p>
+                <div class="player-count" id="flappy-count">Players online: 0</div>
             </a>
-            
-            <a href="/new-game.html" class="game-card">
+            <a href="#" onclick="joinGame('snake')" class="game-card">
+                <h2>🐍 Snake</h2>
+                <p>Slither and grow!</p>
+                <div class="player-count" id="snake-count">Players online: 0</div>
+            </a>
+            <a href="#" onclick="joinGame('new-game')" class="game-card">
                 <h2>🎲 New Game</h2>
                 <p>Coming soon...</p>
+                <div class="player-count" id="new-game-count">Players online: 0</div>
             </a>
-            
-            <div class="game-card" style="opacity: 0.5; cursor: not-allowed;">
-                <h2>🎯 Game 3</h2>
-                <p>Coming soon...</p>
-            </div>
-            
             <div class="game-card" style="opacity: 0.5; cursor: not-allowed;">
                 <h2>⚔️ Game 4</h2>
                 <p>Coming soon...</p>
+                <div class="player-count" id="game4-count">Players online: 0</div>
             </div>
         </div>
     </div>
-
-    <!-- Include Global Chat -->
     <script src="/chat.js"></script>
+    <script>
+        const usernameInput = document.getElementById('username');
+        const ws = new WebSocket(`wss://${window.location.host}/stats`);
+
+        ws.onopen = () => {
+            console.log('Connected to stats WebSocket');
+        };
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'playerCounts') {
+                document.getElementById('flappy-count').textContent = `Players online: ${data.flappy}`;
+                document.getElementById('snake-count').textContent = `Players online: ${data.snake}`;
+                document.getElementById('new-game-count').textContent = `Players online: ${data.newGame}`;
+                document.getElementById('game4-count').textContent = `Players online: ${data.game4}`;
+            }
+        };
+
+        function joinGame(game) {
+            const username = usernameInput.value.trim() || 'Guest';
+            window.location.href = `/${game}.html?username=${encodeURIComponent(username)}`;
+        }
+    </script>
 </body>
 </html>
