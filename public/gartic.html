@@ -164,7 +164,9 @@
         }
         .room-code strong {
             color: #667eea;
-            font-size: 24px;
+            font-size: 48px;
+            letter-spacing: 10px;
+            font-family: monospace;
         }
         textarea {
             width: 100%;
@@ -193,7 +195,7 @@
         
         <div style="text-align: center; margin: 20px 0; color: #666;">OR</div>
         
-        <input type="text" id="roomCodeInput" placeholder="Enter room code..." style="text-transform: uppercase;">
+        <input type="text" id="roomCodeInput" placeholder="Enter 4-digit room code..." maxlength="4" style="text-transform: none; text-align: center; font-size: 24px; letter-spacing: 5px;">
         <button onclick="joinRoomByCode()" style="width: 100%;">Join Room</button>
         
         <div id="publicRoomsList" style="margin-top: 30px;"></div>
@@ -385,9 +387,9 @@
         }
 
         function joinRoomByCode() {
-            const code = document.getElementById('roomCodeInput').value.trim().toUpperCase();
-            if (!code) {
-                alert('Please enter a room code!');
+            const code = document.getElementById('roomCodeInput').value.trim();
+            if (!code || code.length !== 4 || !/^\d+$/.test(code)) {
+                alert('Please enter a valid 4-digit room code!');
                 return;
             }
             
