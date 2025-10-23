@@ -552,11 +552,13 @@
                     // Describing a drawing
                     document.getElementById('writingPrompt').textContent = 'Describe this drawing:';
                     document.getElementById('writingSubtext').textContent = `From ${data.chainOwner}'s chain`;
-                    // TODO: Show the drawing
+                    document.getElementById('previousDrawingContainer').style.display = 'block';
+                    document.getElementById('previousDrawing').src = data.drawing;
                 } else {
                     // Initial prompt
                     document.getElementById('writingPrompt').textContent = 'Write your starting prompt!';
                     document.getElementById('writingSubtext').textContent = 'Be creative!';
+                    document.getElementById('previousDrawingContainer').style.display = 'none';
                 }
             } else if (data.action === 'draw') {
                 document.getElementById('drawingPhase').style.display = 'block';
