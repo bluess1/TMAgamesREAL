@@ -3,115 +3,668 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TMAGames - Snake</title>
+    <title>Gartic Phone - TMAGames</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         body {
             font-family: Arial, sans-serif;
-            background: linear-gradient(to bottom, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            margin: 0;
+            padding: 20px;
         }
         .container {
-            text-align: center;
-            color: white;
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
         }
         h1 {
-            color: white;
-            margin-bottom: 20px;
-            font-size: 36px;
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 10px;
         }
-        canvas {
-            background: #1a202c;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        h2 {
+            color: #764ba2;
+            margin-bottom: 20px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
         }
         button {
-            padding: 10px 20px;
-            background: #667eea;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             font-size: 16px;
+            font-weight: bold;
             cursor: pointer;
-            margin-top: 10px;
+            transition: transform 0.2s;
         }
         button:hover {
-            background: #764ba2;
+            transform: translateY(-2px);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .btn-group button {
+            flex: 1;
+        }
+        #lobbyScreen, #gameScreen, #resultsScreen {
+            display: none;
+        }
+        .player-list {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .player-item {
+            padding: 10px;
+            background: white;
+            margin: 5px 0;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .player-item.host {
+            border-left: 4px solid #667eea;
+        }
+        #drawingCanvas {
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            cursor: crosshair;
+            display: block;
+            margin: 20px auto;
+            background: white;
+        }
+        .color-picker {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 15px 0;
+        }
+        .color-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid white;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .color-btn.active {
+            border-color: #000;
+            transform: scale(1.2);
+        }
+        .timer {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 15px 0;
+        }
+        .prompt-box {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .prompt-box h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .chain-viewer {
+            margin: 20px 0;
+        }
+        .chain-entry {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            text-align: center;
+        }
+        .chain-entry canvas {
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            max-width: 100%;
+        }
+        .room-code {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .room-code strong {
+            color: #667eea;
+            font-size: 24px;
+        }
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: Arial, sans-serif;
+            resize: vertical;
+            min-height: 80px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>TMAGames - Snake</h1>
-        <canvas id="gameCanvas" width="800" height="600"></canvas>
-        <br>
-        <button onclick="window.location.href='/'">Back to Menu</button>
+    <!-- Menu Screen -->
+    <div id="menuScreen" class="container">
+        <h1>🎨 Gartic Phone</h1>
+        <p class="subtitle">The hilarious drawing & guessing game!</p>
+        
+        <input type="text" id="usernameInput" placeholder="Enter your username..." maxlength="15">
+        
+        <div class="btn-group">
+            <button onclick="createRoom(true)">Create Public Room</button>
+            <button onclick="createRoom(false)">Create Private Room</button>
+        </div>
+        
+        <div style="text-align: center; margin: 20px 0; color: #666;">OR</div>
+        
+        <input type="text" id="roomCodeInput" placeholder="Enter room code..." style="text-transform: uppercase;">
+        <button onclick="joinRoomByCode()" style="width: 100%;">Join Room</button>
+        
+        <div id="publicRoomsList" style="margin-top: 30px;"></div>
     </div>
+
+    <!-- Lobby Screen -->
+    <div id="lobbyScreen" class="container">
+        <h1>🎨 Gartic Phone</h1>
+        <h2>Waiting Room</h2>
+        
+        <div class="room-code">
+            Room Code: <strong id="roomCode"></strong>
+        </div>
+        
+        <div class="player-list" id="playerList"></div>
+        
+        <p style="text-align: center; color: #666; margin: 15px 0;">
+            Waiting for host to start the game...
+        </p>
+        
+        <div class="btn-group">
+            <button id="startGameBtn" onclick="startGame()" style="display: none;">Start Game</button>
+            <button onclick="leaveRoom()">Leave Room</button>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="gameScreen" class="container">
+        <div class="timer" id="timer">60</div>
+        
+        <!-- Writing Phase -->
+        <div id="writingPhase" style="display: none;">
+            <div class="prompt-box">
+                <h3 id="writingPrompt">Write a prompt!</h3>
+                <p style="color: #666; margin-bottom: 15px;" id="writingSubtext"></p>
+            </div>
+            <textarea id="textInput" placeholder="Type your prompt or description here..."></textarea>
+            <button onclick="submitText()" style="width: 100%; margin-top: 15px;">Submit</button>
+        </div>
+        
+        <!-- Drawing Phase -->
+        <div id="drawingPhase" style="display: none;">
+            <div class="prompt-box">
+                <h3>Draw this:</h3>
+                <p style="font-size: 20px; font-weight: bold; color: #333;" id="drawingPrompt"></p>
+            </div>
+            
+            <div class="color-picker" id="colorPicker"></div>
+            
+            <canvas id="drawingCanvas" width="600" height="400"></canvas>
+            
+            <div class="btn-group">
+                <button onclick="clearCanvas()">Clear</button>
+                <button onclick="submitDrawing()">Submit Drawing</button>
+            </div>
+        </div>
+        
+        <!-- Waiting Phase -->
+        <div id="waitingPhase" style="display: none;">
+            <div class="prompt-box">
+                <h3>✅ Submitted!</h3>
+                <p style="color: #666;">Waiting for other players...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Screen -->
+    <div id="resultsScreen" class="container" style="max-width: 1000px;">
+        <h1>🎉 Results!</h1>
+        <p class="subtitle">See how your prompts evolved!</p>
+        
+        <div id="chainsContainer"></div>
+        
+        <div class="btn-group">
+            <button onclick="backToLobby()">Back to Lobby</button>
+            <button onclick="backToMenu()">Main Menu</button>
+        </div>
+    </div>
+
+    <script src="/chat.js"></script>
     <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const username = new URLSearchParams(window.location.search).get('username') || 'Guest';
-        const wsUrl = window.location.hostname === 'localhost' 
-            ? 'ws://localhost:3000/snake' 
-            : `wss://${window.location.host}/snake`;
-        const ws = new WebSocket(`${wsUrl}?username=${encodeURIComponent(username)}`);
-
+        let socket;
+        let username;
         let playerId;
-        let players = {};
-        let food = [];
+        let roomId;
+        let isHost = false;
+        let canvas, ctx;
+        let isDrawing = false;
+        let currentColor = '#000000';
+        let timerInterval;
 
-        ws.onopen = () => {
-            console.log('🔌 Connected to Snake server');
+        const colors = ['#000000', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FFA500'];
+
+        // Load username
+        username = localStorage.getItem('tmaUsername');
+        if (!username) {
+            username = prompt('Enter your username:') || 'Player' + Math.floor(Math.random() * 1000);
+            localStorage.setItem('tmaUsername', username);
+        }
+        document.getElementById('usernameInput').value = username;
+
+        // Connect WebSocket
+        window.onload = () => {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/gartic`;
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = () => {
+                console.log('✅ Connected to Gartic Phone server');
+            };
+
+            socket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleMessage(data);
+            };
+
+            socket.onerror = (error) => {
+                console.error('❌ WebSocket error:', error);
+                alert('Connection error! Please refresh.');
+            };
+
+            socket.onclose = () => {
+                console.log('🔌 Disconnected');
+            };
+
+            // Setup canvas
+            canvas = document.getElementById('drawingCanvas');
+            ctx = canvas.getContext('2d');
+            setupCanvas();
+            
+            // Setup color picker
+            setupColorPicker();
         };
 
-        ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.type === 'init') {
-                playerId = data.playerId;
-                console.log(`🎮 Initialized with ID: ${playerId}`);
-            } else if (data.type === 'gameState') {
-                players = data.state.players;
-                food = data.state.food;
+        function handleMessage(data) {
+            console.log('📥 Received:', data.type, data);
+            
+            switch(data.type) {
+                case 'roomCreated':
+                    playerId = data.playerId;
+                    roomId = data.roomId;
+                    isHost = true;
+                    showLobby(data.roomInfo);
+                    break;
+                
+                case 'roomJoined':
+                    playerId = data.playerId;
+                    roomId = data.roomId;
+                    showLobby(data.roomInfo);
+                    break;
+                
+                case 'playerJoined':
+                case 'playerLeft':
+                    updatePlayerList(data.roomInfo);
+                    break;
+                
+                case 'turnStart':
+                    startTurn(data);
+                    break;
+                
+                case 'yourTurn':
+                    showYourTurn(data);
+                    break;
+                
+                case 'submissionReceived':
+                    showWaiting();
+                    break;
+                
+                case 'gameEnd':
+                    showResults(data.results);
+                    break;
+                
+                case 'error':
+                    alert(data.message);
+                    break;
             }
-        };
-
-        document.addEventListener('mousemove', (event) => {
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = event.clientX - rect.left;
-            const mouseY = event.clientY - rect.top;
-            if (ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: 'update', x: mouseX, y: mouseY }));
-            }
-        });
-
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            // Draw food
-            food.forEach(f => {
-                ctx.fillStyle = 'red';
-                ctx.beginPath();
-                ctx.arc(f.x, f.y, 5, 0, Math.PI * 2);
-                ctx.fill();
-            });
-            // Draw players
-            Object.values(players).forEach(player => {
-                ctx.fillStyle = player.color;
-                player.segments.forEach(segment => {
-                    ctx.beginPath();
-                    ctx.arc(segment.x, segment.y, 10, 0, Math.PI * 2);
-                    ctx.fill();
-                });
-                ctx.fillStyle = 'white';
-                ctx.font = '12px Arial';
-                ctx.fillText(`${player.username} (${player.score})`, player.segments[0].x - 20, player.segments[0].y - 15);
-            });
-            requestAnimationFrame(draw);
         }
 
-        requestAnimationFrame(draw);
+        function createRoom(isPublic) {
+            const name = document.getElementById('usernameInput').value.trim() || username;
+            localStorage.setItem('tmaUsername', name);
+            username = name;
+            
+            socket.send(JSON.stringify({
+                type: 'createRoom',
+                isPublic: isPublic,
+                username: username
+            }));
+        }
+
+        function joinRoomByCode() {
+            const code = document.getElementById('roomCodeInput').value.trim().toUpperCase();
+            if (!code) {
+                alert('Please enter a room code!');
+                return;
+            }
+            
+            const name = document.getElementById('usernameInput').value.trim() || username;
+            localStorage.setItem('tmaUsername', name);
+            username = name;
+            
+            socket.send(JSON.stringify({
+                type: 'joinRoom',
+                roomId: code,
+                username: username
+            }));
+        }
+
+        function showLobby(roomInfo) {
+            document.getElementById('menuScreen').style.display = 'none';
+            document.getElementById('lobbyScreen').style.display = 'block';
+            document.getElementById('roomCode').textContent = roomId;
+            
+            if (isHost) {
+                document.getElementById('startGameBtn').style.display = 'block';
+            }
+            
+            updatePlayerList(roomInfo);
+        }
+
+        function updatePlayerList(roomInfo) {
+            const list = document.getElementById('playerList');
+            list.innerHTML = '<h3>Players:</h3>';
+            
+            roomInfo.players.forEach(player => {
+                const div = document.createElement('div');
+                div.className = 'player-item';
+                if (player.id === roomInfo.hostId) {
+                    div.classList.add('host');
+                }
+                div.innerHTML = `
+                    <span>${player.username} ${player.id === roomInfo.hostId ? '👑' : ''}</span>
+                    <span>${player.id === playerId ? '(You)' : ''}</span>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function startGame() {
+            socket.send(JSON.stringify({
+                type: 'startGame'
+            }));
+        }
+
+        function startTurn(data) {
+            document.getElementById('lobbyScreen').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'block';
+            
+            startTimer(data.duration);
+        }
+
+        function showYourTurn(data) {
+            // Hide all phases
+            document.getElementById('writingPhase').style.display = 'none';
+            document.getElementById('drawingPhase').style.display = 'none';
+            document.getElementById('waitingPhase').style.display = 'none';
+            
+            if (data.action === 'write') {
+                document.getElementById('writingPhase').style.display = 'block';
+                
+                if (data.drawing) {
+                    // Describing a drawing
+                    document.getElementById('writingPrompt').textContent = 'Describe this drawing:';
+                    document.getElementById('writingSubtext').textContent = `From ${data.chainOwner}'s chain`;
+                    // TODO: Show the drawing
+                } else {
+                    // Initial prompt
+                    document.getElementById('writingPrompt').textContent = 'Write your starting prompt!';
+                    document.getElementById('writingSubtext').textContent = 'Be creative!';
+                }
+            } else if (data.action === 'draw') {
+                document.getElementById('drawingPhase').style.display = 'block';
+                document.getElementById('drawingPrompt').textContent = data.prompt;
+                clearCanvas();
+            }
+        }
+
+        function submitText() {
+            const text = document.getElementById('textInput').value.trim();
+            if (!text) {
+                alert('Please enter some text!');
+                return;
+            }
+            
+            socket.send(JSON.stringify({
+                type: 'submitEntry',
+                content: text
+            }));
+            
+            document.getElementById('textInput').value = '';
+        }
+
+        function submitDrawing() {
+            const drawingData = canvas.toDataURL();
+            
+            socket.send(JSON.stringify({
+                type: 'submitEntry',
+                content: drawingData
+            }));
+        }
+
+        function showWaiting() {
+            document.getElementById('writingPhase').style.display = 'none';
+            document.getElementById('drawingPhase').style.display = 'none';
+            document.getElementById('waitingPhase').style.display = 'block';
+        }
+
+        function startTimer(duration) {
+            let timeLeft = Math.floor(duration / 1000);
+            document.getElementById('timer').textContent = timeLeft;
+            
+            if (timerInterval) clearInterval(timerInterval);
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer').textContent = timeLeft;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                }
+            }, 1000);
+        }
+
+        function showResults(results) {
+            document.getElementById('gameScreen').style.display = 'none';
+            document.getElementById('resultsScreen').style.display = 'block';
+            
+            if (timerInterval) clearInterval(timerInterval);
+            
+            const container = document.getElementById('chainsContainer');
+            container.innerHTML = '';
+            
+            results.forEach((chain, index) => {
+                const chainDiv = document.createElement('div');
+                chainDiv.className = 'chain-viewer';
+                chainDiv.innerHTML = `<h2 style="color: #667eea; margin-bottom: 20px;">📜 ${chain.owner}'s Chain</h2>`;
+                
+                chain.sequence.forEach((entry, i) => {
+                    const entryDiv = document.createElement('div');
+                    entryDiv.className = 'chain-entry';
+                    
+                    if (entry.type === 'text') {
+                        entryDiv.innerHTML = `
+                            <p style="color: #666; font-size: 12px; margin-bottom: 5px;">
+                                ${i === 0 ? '📝 Initial Prompt' : '✍️ Description'} by ${entry.authorName}
+                            </p>
+                            <p style="font-size: 20px; font-weight: bold; color: #333;">${entry.content}</p>
+                        `;
+                    } else {
+                        const img = document.createElement('img');
+                        img.src = entry.content;
+                        img.style.maxWidth = '100%';
+                        img.style.borderRadius = '8px';
+                        
+                        entryDiv.innerHTML = `
+                            <p style="color: #666; font-size: 12px; margin-bottom: 10px;">
+                                🎨 Drawing by ${entry.authorName}
+                            </p>
+                        `;
+                        entryDiv.appendChild(img);
+                    }
+                    
+                    chainDiv.appendChild(entryDiv);
+                });
+                
+                container.appendChild(chainDiv);
+            });
+        }
+
+        function leaveRoom() {
+            socket.send(JSON.stringify({ type: 'leave' }));
+            backToMenu();
+        }
+
+        function backToLobby() {
+            document.getElementById('resultsScreen').style.display = 'none';
+            document.getElementById('lobbyScreen').style.display = 'block';
+        }
+
+        function backToMenu() {
+            document.getElementById('lobbyScreen').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'none';
+            document.getElementById('resultsScreen').style.display = 'none';
+            document.getElementById('menuScreen').style.display = 'block';
+            
+            roomId = null;
+            playerId = null;
+            isHost = false;
+        }
+
+        // Canvas drawing functions
+        function setupCanvas() {
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseout', stopDrawing);
+            
+            // Touch support
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousedown', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                canvas.dispatchEvent(mouseEvent);
+            });
+            
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousemove', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                canvas.dispatchEvent(mouseEvent);
+            });
+            
+            canvas.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                const mouseEvent = new MouseEvent('mouseup', {});
+                canvas.dispatchEvent(mouseEvent);
+            });
+            
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = 3;
+        }
+
+        function setupColorPicker() {
+            const picker = document.getElementById('colorPicker');
+            colors.forEach(color => {
+                const btn = document.createElement('div');
+                btn.className = 'color-btn';
+                btn.style.backgroundColor = color;
+                if (color === currentColor) btn.classList.add('active');
+                
+                btn.onclick = () => {
+                    currentColor = color;
+                    document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                };
+                
+                picker.appendChild(btn);
+            });
+        }
+
+        function startDrawing(e) {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            ctx.beginPath();
+            ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            ctx.strokeStyle = currentColor;
+            ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+            ctx.stroke();
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        function clearCanvas() {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
     </script>
 </body>
 </html>
