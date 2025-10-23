@@ -25,6 +25,7 @@
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             max-width: 600px;
             text-align: center;
+            display: none; /* Hidden until loaded */
         }
         h1 {
             color: #667eea;
@@ -66,10 +67,42 @@
             color: rgba(255,255,255,0.7);
             margin-top: 5px;
         }
+        .loading-screen {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+        .loading-screen p {
+            color: #666;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
-    <div class="menu-container">
+    <div class="loading-screen" id="loadingScreen">
+        <h1>TMAgames</h1>
+        <p>Connecting to server...</p>
+        <div class="loader"></div>
+    </div>
+    <div class="menu-container" id="menuContainer">
         <h1>TMAgames, now with TMAchat</h1>
         <p>Welcome! Choose a game to play with friends online</p>
         <input type="text" id="username" placeholder="Enter your username" style="width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 5px;">
@@ -99,6 +132,8 @@
     <script src="/chat.js"></script>
     <script>
         const usernameInput = document.getElementById('username');
+        const loadingScreen = document.getElementById('loadingScreen');
+        const menuContainer = document.getElementById('menuContainer');
         const ws = new WebSocket(`wss://${window.location.host}/stats`);
 
         ws.onopen = () => {
@@ -108,11 +143,23 @@
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
             if (data.type === 'playerCounts') {
+                loadingScreen.style.display = 'none';
+                menuContainer.style.display = 'block';
                 document.getElementById('flappy-count').textContent = `Players online: ${data.flappy}`;
                 document.getElementById('snake-count').textContent = `Players online: ${data.snake}`;
                 document.getElementById('new-game-count').textContent = `Players online: ${data.newGame}`;
                 document.getElementById('game4-count').textContent = `Players online: ${data.game4}`;
             }
+        };
+
+        ws.onerror = (error) => {
+            console.error('Stats WebSocket error:', error);
+            loadingScreen.innerHTML = '<h1>TMAgames</h1><p>Failed to connect to server. Please try again.</p><button onclick="window.location.reload()">Retry</button>';
+        };
+
+        ws.onclose = () => {
+            console.log('Stats WebSocket closed');
+            loadingScreen.innerHTML = '<h1>TMAgames</h1><p>Server disconnected. Please try again.</p><button onclick="window.location.reload()">Retry</button>';
         };
 
         function joinGame(game) {
