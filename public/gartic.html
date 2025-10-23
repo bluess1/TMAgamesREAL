@@ -168,6 +168,28 @@
             letter-spacing: 10px;
             font-family: monospace;
         }
+        .room-code.public {
+            display: none;
+        }
+        .public-room-item {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+        }
+        .public-room-item:hover {
+            background: #edf2f7;
+            transform: translateX(5px);
+        }
+        .public-room-item button {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
         textarea {
             width: 100%;
             padding: 12px;
@@ -195,10 +217,14 @@
         
         <div style="text-align: center; margin: 20px 0; color: #666;">OR</div>
         
-        <input type="text" id="roomCodeInput" placeholder="Enter 4-digit room code..." maxlength="4" style="text-transform: none; text-align: center; font-size: 24px; letter-spacing: 5px;">
-        <button onclick="joinRoomByCode()" style="width: 100%;">Join Room</button>
+        <h3 style="margin-bottom: 15px; color: #667eea;">Join Public Room:</h3>
+        <div id="publicRoomsList" style="margin-bottom: 30px;">
+            <p style="text-align: center; color: #999;">Loading rooms...</p>
+        </div>
         
-        <div id="publicRoomsList" style="margin-top: 30px;"></div>
+        <h3 style="margin-bottom: 15px; color: #667eea;">Join Private Room:</h3>
+        <input type="text" id="roomCodeInput" placeholder="Enter 4-digit room code..." maxlength="4" style="text-transform: none; text-align: center; font-size: 24px; letter-spacing: 5px;">
+        <button onclick="joinRoomByCode()" style="width: 100%;">Join Private Room</button>
     </div>
 
     <!-- Lobby Screen -->
@@ -232,6 +258,12 @@
                 <h3 id="writingPrompt">Write a prompt!</h3>
                 <p style="color: #666; margin-bottom: 15px;" id="writingSubtext"></p>
             </div>
+            
+            <!-- Show previous drawing if describing -->
+            <div id="previousDrawingContainer" style="display: none; text-align: center; margin: 20px 0;">
+                <img id="previousDrawing" style="max-width: 100%; border: 3px solid #667eea; border-radius: 10px;">
+            </div>
+            
             <textarea id="textInput" placeholder="Type your prompt or description here..."></textarea>
             <button onclick="submitText()" style="width: 100%; margin-top: 15px;">Submit</button>
         </div>
@@ -301,10 +333,14 @@
         window.onload = () => {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${protocol}//${window.location.host}/gartic`;
+            console.log('🔌 Connecting to:', wsUrl);
             socket = new WebSocket(wsUrl);
 
             socket.onopen = () => {
                 console.log('✅ Connected to Gartic Phone server');
+                refreshPublicRooms();
+                // Refresh public rooms every 3 seconds
+                setInterval(refreshPublicRooms, 3000);
             };
 
             socket.onmessage = (event) => {
@@ -352,6 +388,10 @@
                     updatePlayerList(data.roomInfo);
                     break;
                 
+                case 'publicRoomsList':
+                    displayPublicRooms(data.rooms);
+                    break;
+                
                 case 'turnStart':
                     startTurn(data);
                     break;
@@ -372,6 +412,51 @@
                     alert(data.message);
                     break;
             }
+        }
+
+        function refreshPublicRooms() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'listPublicRooms'
+                }));
+            }
+        }
+
+        function displayPublicRooms(rooms) {
+            const container = document.getElementById('publicRoomsList');
+            
+            if (rooms.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999;">No public rooms available. Create one!</p>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            rooms.forEach(room => {
+                const div = document.createElement('div');
+                div.className = 'public-room-item';
+                div.innerHTML = `
+                    <div>
+                        <strong style="color: #667eea;">${room.players[0].username}'s Room</strong>
+                        <p style="color: #666; font-size: 14px; margin-top: 5px;">
+                            ${room.playerCount} ${room.playerCount === 1 ? 'player' : 'players'}
+                        </p>
+                    </div>
+                    <button onclick="joinPublicRoom('${room.roomId}')">Join</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function joinPublicRoom(roomId) {
+            const name = document.getElementById('usernameInput').value.trim() || username;
+            localStorage.setItem('tmaUsername', name);
+            username = name;
+            
+            socket.send(JSON.stringify({
+                type: 'joinRoom',
+                roomId: roomId,
+                username: username
+            }));
         }
 
         function createRoom(isPublic) {
@@ -407,7 +492,14 @@
         function showLobby(roomInfo) {
             document.getElementById('menuScreen').style.display = 'none';
             document.getElementById('lobbyScreen').style.display = 'block';
-            document.getElementById('roomCode').textContent = roomId;
+            
+            const roomCodeDiv = document.querySelector('.room-code');
+            if (roomInfo.isPublic) {
+                roomCodeDiv.classList.add('public');
+            } else {
+                roomCodeDiv.classList.remove('public');
+                document.getElementById('roomCode').textContent = roomId;
+            }
             
             if (isHost) {
                 document.getElementById('startGameBtn').style.display = 'block';
