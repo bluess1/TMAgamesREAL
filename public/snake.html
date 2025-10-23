@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TMAGames - Snake</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to bottom, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+            color: white;
+        }
+        h1 {
+            color: white;
+            margin-bottom: 20px;
+            font-size: 36px;
+        }
+        canvas {
+            background: #1a202c;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>TMAGames - Snake</h1>
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <br>
+        <button onclick="window.location.href='/'">Back to Menu</button>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const username = new URLSearchParams(window.location.search).get('username') || 'Guest';
+        const wsUrl = window.location.hostname === 'localhost' 
+            ? 'ws://localhost:3000/snake' 
+            : `wss://${window.location.host}/snake`;
+        const ws = new WebSocket(`${wsUrl}?username=${encodeURIComponent(username)}`);
+
+        let playerId;
+        let players = {};
+        let food = [];
+
+        ws.onopen = () => {
+            console.log('🔌 Connected to Snake server');
+        };
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'init') {
+                playerId = data.playerId;
+                console.log(`🎮 Initialized with ID: ${playerId}`);
+            } else if (data.type === 'gameState') {
+                players = data.state.players;
+                food = data.state.food;
+            }
+        };
+
+        document.addEventListener('mousemove', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'update', x: mouseX, y: mouseY }));
+            }
+        });
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Draw food
+            food.forEach(f => {
+                ctx.fillStyle = 'red';
+                ctx.beginPath();
+                ctx.arc(f.x, f.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            // Draw players
+            Object.values(players).forEach(player => {
+                ctx.fillStyle = player.color;
+                player.segments.forEach(segment => {
+                    ctx.beginPath();
+                    ctx.arc(segment.x, segment.y, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                ctx.fillStyle = 'white';
+                ctx.font = '12px Arial';
+                ctx.fillText(`${player.username} (${player.score})`, player.segments[0].x - 20, player.segments[0].y - 15);
+            });
+            requestAnimationFrame(draw);
+        }
+
+        requestAnimationFrame(draw);
+    </script>
+</body>
+</html>
