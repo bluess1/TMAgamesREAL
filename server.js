@@ -3,6 +3,7 @@ const { Server } = require('ws');
 const path = require('path');
 const flappyServer = require('./servers/flappy-server');
 const newGameServer = require('./servers/new-game-server');
+const chatServer = require('./servers/chat-server');
 const snakeServer = require('./servers/snake-server');
 
 const app = express();
@@ -50,7 +51,7 @@ function broadcastPlayerCounts() {
 // Broadcast player counts every 5 seconds
 setInterval(broadcastPlayerCounts, 5000);
 
-// Handle WebSocket upgrades for multiple games
+// Handle WebSocket upgrades for multiple games + global chat
 server.on('upgrade', (request, socket, head) => {
   const pathname = request.url.split('?')[0];
   if (pathname === '/flappy') {
@@ -68,6 +69,10 @@ server.on('upgrade', (request, socket, head) => {
       newGameServer.wssNewGame.emit('connection', ws, request);
       broadcastPlayerCounts();
     });
+  } else if (pathname === '/chat') {
+    chatServer.wssChat.handleUpgrade(request, socket, head, (ws) => {
+      chatServer.wssChat.emit('connection', ws, request);
+    });
   } else if (pathname === '/stats') {
     wssStats.handleUpgrade(request, socket, head, (ws) => {
       wssStats.emit('connection', ws, request);
@@ -77,4 +82,4 @@ server.on('upgrade', (request, socket, head) => {
   }
 });
 
-console.log('Game Hub ready with Flappy Bird, Snake, and New Game servers!');
+console.log('Game Hub ready with Flappy Bird, Snake, New Game, and Global Chat servers!');
