@@ -258,7 +258,19 @@ wssGartic.on('connection', (ws) => {
       switch(data.type) {
         case 'createRoom':
           playerId = generateId();
-          const roomId = data.isPublic ? 'PUB-' + generateRoomCode() : generateRoomCode();
+          let roomId;
+          
+          if (data.isPublic) {
+            // Public rooms use player name + random number
+            roomId = 'PUBLIC-' + generateId().substr(0, 6);
+          } else {
+            // Private rooms get 4-digit code
+            roomId = generateRoomCode();
+            // Make sure code is unique
+            while (rooms.has(roomId)) {
+              roomId = generateRoomCode();
+            }
+          }
           
           const newRoom = new Room(roomId, data.isPublic, playerId, data.username);
           newRoom.addPlayer(playerId, data.username, ws);
@@ -406,6 +418,11 @@ wssGartic.on('connection', (ws) => {
 
 function generateId() {
   return Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+}
+
+function generateRoomCode() {
+  // Generate 4-digit room code
+  return Math.floor(1000 + Math.random() * 9000).toString();
 }
 
 module.exports = { wssGartic };
