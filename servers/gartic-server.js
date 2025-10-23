@@ -258,7 +258,7 @@ wssGartic.on('connection', (ws) => {
       switch(data.type) {
         case 'createRoom':
           playerId = generateId();
-          const roomId = data.isPublic ? 'public-' + generateId() : 'private-' + generateId();
+          const roomId = data.isPublic ? 'PUB-' + generateRoomCode() : generateRoomCode();
           
           const newRoom = new Room(roomId, data.isPublic, playerId, data.username);
           newRoom.addPlayer(playerId, data.username, ws);
