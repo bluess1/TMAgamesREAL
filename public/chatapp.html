@@ -257,19 +257,47 @@
             align-items: center;
             flex-shrink: 0;
         }
-        .input-area input[type="text"] {
+        
+        /* --- START OF EDITED/ADDED STYLES --- */
+        
+        /* New styling for the textarea element */
+        .input-area textarea#messageInput {
             flex: 1;
             padding: 12px 16px;
             background: #1a1a2e;
             border: 2px solid #2a3f5f;
-            border-radius: 25px;
+            border-radius: 25px; /* Adjust border-radius for aesthetic */
             color: #eee;
             font-size: 15px;
-        }
-        .input-area input[type="text"]:focus {
+            resize: none; /* Prevent manual resizing by user */
+            min-height: 49px; /* Match button/file height for alignment */
+            max-height: 150px; /* Limit max height before internal scrollbar appears */
+            overflow-y: auto; /* IMPORTANT: Adds scrollbar for long text */
+            line-height: 1.4;
+            height: auto; /* Allow content to dictate initial height */
             outline: none;
+            font-family: inherit; /* Inherit font from body */
+        }
+        
+        .input-area textarea#messageInput:focus {
             border-color: #667eea;
         }
+        
+        /* Hiding the global scrollbar is still useful */
+        ::-webkit-scrollbar {
+            width: 0px; /* Hide any other scrollbars */
+        }
+
+        /* Re-enabling the custom scrollbar for the textarea itself */
+        .input-area textarea#messageInput::-webkit-scrollbar {
+            width: 8px; 
+        }
+        .input-area textarea#messageInput::-webkit-scrollbar-thumb {
+             background: rgba(102, 126, 234, 0.3);
+             border-radius: 4px;
+        }
+        /* --- END OF EDITED/ADDED STYLES --- */
+
         .input-area button {
             padding: 12px 24px;
             background: #667eea;
@@ -292,6 +320,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0; /* Prevents file button from shrinking */
         }
         .file-btn:hover {
             background: #2a3f5f;
@@ -299,14 +328,9 @@
         input[type="file"] {
             display: none;
         }
-        /* Hide global scrollbar styles - only chat has custom one */
-        ::-webkit-scrollbar {
-            width: 0px; /* Hide any other scrollbars */
-        }
     </style>
 </head>
 <body>
-    <!-- Login Screen -->
     <div id="loginScreen">
         <div class="login-box">
             <h1>💬 TMAChat</h1>
@@ -316,9 +340,7 @@
         </div>
     </div>
 
-    <!-- Chat Screen -->
     <div id="chatScreen" style="display: none;">
-        <!-- Sidebar -->
         <div class="sidebar">
             <div class="sidebar-header">
                 <h2>💬 TMAChat</h2>
@@ -334,7 +356,6 @@
             <div id="dmsTab" class="dm-list" style="display: none;"></div>
         </div>
 
-        <!-- Main Chat Area -->
         <div class="chat-main">
             <div class="chat-header">
                 <h3 id="chatTitle">Global Chat</h3>
@@ -348,7 +369,7 @@
             <div class="input-area">
                 <label class="file-btn" for="fileInput">📎</label>
                 <input type="file" id="fileInput" accept="image/*,video/*,.pdf,.doc,.docx,.txt">
-                <input type="text" id="messageInput" placeholder="Type a message..." maxlength="500">
+                <textarea id="messageInput" placeholder="Type a message..." maxlength="500"></textarea>
                 <button onclick="sendMessage()">Send</button>
             </div>
         </div>
@@ -378,7 +399,7 @@
             localStorage.setItem('tmaUsername', username);
             document.getElementById('currentUsername').textContent = username;
             
-            // Connect WebSocket
+            // Connect WebSocket (omitted for brevity)
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${protocol}//${window.location.host}/chatapp`;
             console.log('🔌 Connecting to:', wsUrl);
@@ -517,21 +538,23 @@
             
             if (!message || !socket || socket.readyState !== WebSocket.OPEN) return;
             
-            if (currentView === 'global') {
-                socket.send(JSON.stringify({
-                    type: 'sendGlobal',
-                    content: message
-                }));
-            } else {
-                socket.send(JSON.stringify({
-                    type: 'sendDM',
-                    recipient: currentView,
-                    content: message
-                }));
+            const sendPayload = {
+                type: 'sendGlobal',
+                content: message,
+                contentType: 'text'
+            };
+            
+            if (currentView !== 'global') {
+                sendPayload.type = 'sendDM';
+                sendPayload.recipient = currentView;
             }
+            
+            socket.send(JSON.stringify(sendPayload));
             
             input.value = '';
             stopTyping();
+            // IMPORTANT: Manually reset height for the textarea after sending
+            input.style.height = 'auto'; 
         }
 
         function switchTab(tab) {
@@ -621,16 +644,20 @@
                 withUser: withUser
             }));
         }
+        
+        // --- START OF EDITED JAVASCRIPT ---
 
         function setupInputListeners() {
             const input = document.getElementById('messageInput');
             
+            // Textarea keypress listener for sending message
             input.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
+                if (e.key === 'Enter' && !e.shiftKey) { // Send on Enter, allow Shift+Enter for new line
+                    e.preventDefault(); // Prevent default Enter action (new line)
                     sendMessage();
                 }
                 
-                // Send typing indicator
+                // Typing indicator logic (remains the same)
                 if (!isTyping) {
                     isTyping = true;
                     socket.send(JSON.stringify({
@@ -644,9 +671,21 @@
                 typingTimeout = setTimeout(stopTyping, 1000);
             });
             
+            // Auto-resize textarea on input
+            input.addEventListener('input', autoGrowTextarea);
+
             // File upload
             document.getElementById('fileInput').addEventListener('change', handleFileUpload);
         }
+
+        // Function to automatically grow the textarea height
+        function autoGrowTextarea() {
+            const textarea = document.getElementById('messageInput');
+            textarea.style.height = 'auto'; // Temporarily shrink to re-calculate scroll height
+            textarea.style.height = (textarea.scrollHeight) + 'px';
+        }
+
+        // --- END OF EDITED JAVASCRIPT ---
 
         function stopTyping() {
             if (isTyping) {
@@ -662,10 +701,15 @@
         function showTypingIndicator(user, isTyping) {
             const indicator = document.getElementById('typingIndicator');
             if (isTyping) {
-                indicator.textContent = `${user} is typing...`;
-                indicator.style.display = 'block';
+                // Only show indicator for the current chat view
+                if (currentView === 'global' || currentView === user) {
+                     indicator.textContent = `${user} is typing...`;
+                     indicator.style.display = 'block';
+                }
             } else {
-                indicator.style.display = 'none';
+                if (indicator.textContent.startsWith(user)) {
+                    indicator.style.display = 'none';
+                }
             }
         }
 
