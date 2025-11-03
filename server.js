@@ -5,6 +5,7 @@ const flappyServer = require('./servers/flappy-server');
 const newGameServer = require('./servers/new-game-server');
 const chatServer = require('./servers/chat-server');
 const garticServer = require('./servers/gartic-server');
+const chatAppServer = require('./servers/chatapp-server');
 
 const app = express();
 
@@ -22,7 +23,7 @@ const server = app.listen(PORT, () => {
   console.log(`🚀 Game Hub server running on port ${PORT}`);
 });
 
-// Handle WebSocket upgrades for multiple games + global chat
+// Handle WebSocket upgrades for multiple games + global chat + chat app
 server.on('upgrade', (request, socket, head) => {
   const pathname = request.url;
   
@@ -42,9 +43,13 @@ server.on('upgrade', (request, socket, head) => {
     garticServer.wssGartic.handleUpgrade(request, socket, head, (ws) => {
       garticServer.wssGartic.emit('connection', ws, request);
     });
+  } else if (pathname === '/chatapp') {
+    chatAppServer.wssChatApp.handleUpgrade(request, socket, head, (ws) => {
+      chatAppServer.wssChatApp.emit('connection', ws, request);
+    });
   } else {
     socket.destroy();
   }
 });
 
-console.log('Game Hub ready with Flappy Bird, Gartic Phone, and Global Chat servers!');
+console.log('Game Hub ready with all games and chat systems!');
