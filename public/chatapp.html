@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TMAChat - Full Messaging App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #loginScreen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        .login-box h1 {
+            color: #667eea;
+            margin-bottom: 30px;
+        }
+        .login-box input {
+            width: 300px;
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        .login-box button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        #chatScreen {
+            display: none;
+            height: 100vh;
+            display: grid;
+            grid-template-columns: 280px 1fr;
+        }
+        .sidebar {
+            background: #16213e;
+            border-right: 1px solid #2a3f5f;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar-header {
+            padding: 20px;
+            background: #0f3460;
+            border-bottom: 1px solid #2a3f5f;
+        }
+        .sidebar-header h2 {
+            color: #fff;
+            font-size: 24px;
+        }
+        .sidebar-tabs {
+            display: flex;
+            padding: 10px;
+            gap: 10px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            background: #1a1a2e;
+            border: none;
+            border-radius: 8px;
+            color: #aaa;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .tab-btn.active {
+            background: #667eea;
+            color: white;
+        }
+        .user-list, .dm-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        .user-item, .dm-item {
+            padding: 12px;
+            margin: 5px 0;
+            background: #1a1a2e;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .user-item:hover, .dm-item:hover {
+            background: #2a3f5f;
+        }
+        .dm-item.active {
+            background: #667eea;
+        }
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #22c55e;
+        }
+        .status-dot.away {
+            background: #fbbf24;
+        }
+        .status-dot.busy {
+            background: #ef4444;
+        }
+        .chat-main {
+            display: flex;
+            flex-direction: column;
+            background: #0f3460;
+        }
+        .chat-header {
+            padding: 20px;
+            background: #16213e;
+            border-bottom: 1px solid #2a3f5f;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .chat-header h3 {
+            font-size: 20px;
+            color: #fff;
+        }
+        .back-btn {
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .message {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 15px;
+            word-wrap: break-word;
+        }
+        .message.own {
+            align-self: flex-end;
+            background: #667eea;
+            color: white;
+        }
+        .message.other {
+            align-self: flex-start;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        .message.system {
+            align-self: center;
+            background: transparent;
+            color: #888;
+            font-style: italic;
+            font-size: 14px;
+        }
+        .message-sender {
+            font-weight: bold;
+            font-size: 12px;
+            margin-bottom: 4px;
+            color: #aaa;
+        }
+        .message-time {
+            font-size: 11px;
+            color: rgba(255,255,255,0.6);
+            margin-top: 4px;
+        }
+        .message.other .message-time {
+            color: #888;
+        }
+        .message-file {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            margin-top: 5px;
+        }
+        .message-file img {
+            max-width: 300px;
+            border-radius: 8px;
+        }
+        .typing-indicator {
+            padding: 10px 20px;
+            color: #888;
+            font-style: italic;
+            font-size: 14px;
+        }
+        .input-area {
+            padding: 20px;
+            background: #16213e;
+            border-top: 1px solid #2a3f5f;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .input-area input[type="text"] {
+            flex: 1;
+            padding: 12px 16px;
+            background: #1a1a2e;
+            border: 2px solid #2a3f5f;
+            border-radius: 25px;
+            color: #eee;
+            font-size: 15px;
+        }
+        .input-area input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .input-area button {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .file-btn {
+            padding: 12px;
+            background: #1a1a2e;
+            border: 2px solid #2a3f5f;
+            border-radius: 50%;
+            cursor: pointer;
+            color: #aaa;
+            font-size: 18px;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .file-btn:hover {
+            background: #2a3f5f;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1a1a2e;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2a3f5f;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen">
+        <div class="login-box">
+            <h1>💬 TMAChat</h1>
+            <p style="color: #666; margin-bottom: 20px;">Enter your username to start chatting</p>
+            <input type="text" id="usernameInput" placeholder="Your username..." maxlength="15">
+            <button onclick="joinChat()">Join Chat</button>
+        </div>
+    </div>
+
+    <!-- Chat Screen -->
+    <div id="chatScreen" style="display: none;">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>💬 TMAChat</h2>
+                <p style="color: #aaa; font-size: 14px; margin-top: 5px;">Welcome, <span id="currentUsername"></span></p>
+            </div>
+            
+            <div class="sidebar-tabs">
+                <button class="tab-btn active" onclick="switchTab('global')">Global</button>
+                <button class="tab-btn" onclick="switchTab('dms')">DMs</button>
+            </div>
+            
+            <div id="globalTab" class="user-list"></div>
+            <div id="dmsTab" class="dm-list" style="display: none;"></div>
+        </div>
+
+        <!-- Main Chat Area -->
+        <div class="chat-main">
+            <div class="chat-header">
+                <h3 id="chatTitle">Global Chat</h3>
+                <button class="back-btn" onclick="backToMenu()">← Back to Games</button>
+            </div>
+            
+            <div class="messages-container" id="messagesContainer"></div>
+            
+            <div class="typing-indicator" id="typingIndicator" style="display: none;"></div>
+            
+            <div class="input-area">
+                <label class="file-btn" for="fileInput">📎</label>
+                <input type="file" id="fileInput" accept="image/*,video/*,.pdf,.doc,.docx,.txt">
+                <input type="text" id="messageInput" placeholder="Type a message..." maxlength="500">
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let socket;
+        let username;
+        let userId;
+        let currentView = 'global'; // 'global' or username for DM
+        let typingTimeout;
+        let isTyping = false;
+
+        // Load username
+        username = localStorage.getItem('tmaUsername');
+        if (username) {
+            document.getElementById('usernameInput').value = username;
+        }
+
+        function joinChat() {
+            username = document.getElementById('usernameInput').value.trim();
+            if (!username) {
+                alert('Please enter a username!');
+                return;
+            }
+            
+            localStorage.setItem('tmaUsername', username);
+            document.getElementById('currentUsername').textContent = username;
+            
+            // Connect WebSocket
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/chatapp`;
+            console.log('🔌 Connecting to:', wsUrl);
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = () => {
+                console.log('✅ Connected to chat');
+                socket.send(JSON.stringify({
+                    type: 'join',
+                    username: username
+                }));
+            };
+
+            socket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleMessage(data);
+            };
+
+            socket.onerror = (error) => {
+                console.error('❌ WebSocket error:', error);
+                alert('Connection error!');
+            };
+
+            socket.onclose = () => {
+                console.log('🔌 Disconnected');
+                alert('Disconnected from chat');
+                location.reload();
+            };
+
+            // Show chat screen
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('chatScreen').style.display = 'grid';
+            
+            // Setup input listeners
+            setupInputListeners();
+        }
+
+        function handleMessage(data) {
+            console.log('📥', data.type, data);
+            
+            switch(data.type) {
+                case 'init':
+                    userId = data.userId;
+                    // Load global messages
+                    data.globalMessages.forEach(msg => addMessageToUI(msg, 'global'));
+                    // Load user list
+                    updateUserList(data.users);
+                    scrollToBottom();
+                    break;
+                
+                case 'globalMessage':
+                    if (currentView === 'global') {
+                        addMessageToUI(data.message, 'global');
+                        scrollToBottom();
+                    }
+                    break;
+                
+                case 'directMessage':
+                    const dmWith = data.message.sender === username ? data.message.recipient : data.message.sender;
+                    if (currentView === dmWith) {
+                        addMessageToUI(data.message, dmWith);
+                        scrollToBottom();
+                    }
+                    // Update DM list
+                    updateDMList(dmWith);
+                    break;
+                
+                case 'dmHistory':
+                    clearMessages();
+                    data.messages.forEach(msg => addMessageToUI(msg, data.withUser));
+                    scrollToBottom();
+                    break;
+                
+                case 'systemMessage':
+                    if (currentView === 'global') {
+                        addSystemMessage(data.message);
+                        scrollToBottom();
+                    }
+                    break;
+                
+                case 'userList':
+                    updateUserList(data.users);
+                    break;
+                
+                case 'userTyping':
+                    showTypingIndicator(data.username, data.isTyping);
+                    break;
+                
+                case 'error':
+                    alert(data.message);
+                    break;
+            }
+        }
+
+        function addMessageToUI(msg, view) {
+            const container = document.getElementById('messagesContainer');
+            const div = document.createElement('div');
+            
+            const isOwn = msg.sender === username;
+            div.className = `message ${isOwn ? 'own' : 'other'}`;
+            
+            let content = '';
+            
+            if (!isOwn && view !== 'global') {
+                content += `<div class="message-sender">${msg.sender}</div>`;
+            } else if (!isOwn) {
+                content += `<div class="message-sender">${msg.sender}</div>`;
+            }
+            
+            if (msg.type === 'text') {
+                content += `<div>${escapeHtml(msg.content)}</div>`;
+            } else if (msg.type === 'image') {
+                content += `<div class="message-file"><img src="${msg.content}" alt="Image"></div>`;
+            } else if (msg.type === 'file') {
+                content += `<div class="message-file">📎 ${msg.content.name}</div>`;
+            }
+            
+            const time = new Date(msg.timestamp).toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            content += `<div class="message-time">${time}</div>`;
+            
+            div.innerHTML = content;
+            container.appendChild(div);
+        }
+
+        function addSystemMessage(text) {
+            const container = document.getElementById('messagesContainer');
+            const div = document.createElement('div');
+            div.className = 'message system';
+            div.textContent = text;
+            container.appendChild(div);
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message || !socket || socket.readyState !== WebSocket.OPEN) return;
+            
+            if (currentView === 'global') {
+                socket.send(JSON.stringify({
+                    type: 'sendGlobal',
+                    content: message
+                }));
+            } else {
+                socket.send(JSON.stringify({
+                    type: 'sendDM',
+                    recipient: currentView,
+                    content: message
+                }));
+            }
+            
+            input.value = '';
+            stopTyping();
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (tab === 'global') {
+                document.getElementById('globalTab').style.display = 'block';
+                document.getElementById('dmsTab').style.display = 'none';
+                openGlobalChat();
+            } else {
+                document.getElementById('globalTab').style.display = 'none';
+                document.getElementById('dmsTab').style.display = 'block';
+            }
+        }
+
+        function openGlobalChat() {
+            currentView = 'global';
+            document.getElementById('chatTitle').textContent = 'Global Chat';
+            // Messages are already loaded from init
+        }
+
+        function openDM(withUser) {
+            currentView = withUser;
+            document.getElementById('chatTitle').textContent = `DM with ${withUser}`;
+            
+            // Load DM history
+            socket.send(JSON.stringify({
+                type: 'loadDMs',
+                withUser: withUser
+            }));
+            
+            // Update DM list UI
+            document.querySelectorAll('.dm-item').forEach(item => item.classList.remove('active'));
+            event.target.closest('.dm-item')?.classList.add('active');
+        }
+
+        function updateUserList(users) {
+            const container = document.getElementById('globalTab');
+            container.innerHTML = '<h4 style="padding: 10px; color: #aaa;">Online Users</h4>';
+            
+            users.forEach(user => {
+                if (user.username === username) return; // Skip self
+                
+                const div = document.createElement('div');
+                div.className = 'user-item';
+                div.onclick = () => {
+                    // Switch to DMs tab and open DM with this user
+                    document.querySelectorAll('.tab-btn')[1].click();
+                    setTimeout(() => {
+                        updateDMList(user.username);
+                        openDMDirectly(user.username);
+                    }, 100);
+                };
+                
+                div.innerHTML = `
+                    <div class="status-dot ${user.status}"></div>
+                    <span>${user.username}</span>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function updateDMList(withUser) {
+            const container = document.getElementById('dmsTab');
+            
+            // Check if DM already exists in list
+            const existing = Array.from(container.querySelectorAll('.dm-item'))
+                .find(item => item.dataset.user === withUser);
+            
+            if (!existing) {
+                const div = document.createElement('div');
+                div.className = 'dm-item';
+                div.dataset.user = withUser;
+                div.onclick = () => openDM(withUser);
+                div.innerHTML = `<span>${withUser}</span>`;
+                container.appendChild(div);
+            }
+        }
+
+        function openDMDirectly(withUser) {
+            currentView = withUser;
+            document.getElementById('chatTitle').textContent = `DM with ${withUser}`;
+            
+            socket.send(JSON.stringify({
+                type: 'loadDMs',
+                withUser: withUser
+            }));
+        }
+
+        function setupInputListeners() {
+            const input = document.getElementById('messageInput');
+            
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+                
+                // Send typing indicator
+                if (!isTyping) {
+                    isTyping = true;
+                    socket.send(JSON.stringify({
+                        type: 'typing',
+                        recipient: currentView === 'global' ? null : currentView,
+                        isTyping: true
+                    }));
+                }
+                
+                clearTimeout(typingTimeout);
+                typingTimeout = setTimeout(stopTyping, 1000);
+            });
+            
+            // File upload
+            document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+        }
+
+        function stopTyping() {
+            if (isTyping) {
+                isTyping = false;
+                socket.send(JSON.stringify({
+                    type: 'typing',
+                    recipient: currentView === 'global' ? null : currentView,
+                    isTyping: false
+                }));
+            }
+        }
+
+        function showTypingIndicator(user, isTyping) {
+            const indicator = document.getElementById('typingIndicator');
+            if (isTyping) {
+                indicator.textContent = `${user} is typing...`;
+                indicator.style.display = 'block';
+            } else {
+                indicator.style.display = 'none';
+            }
+        }
+
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Check file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File too large! Max 5MB');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const fileData = event.target.result;
+                
+                if (file.type.startsWith('image/')) {
+                    // Send as image
+                    const sendData = {
+                        type: currentView === 'global' ? 'sendGlobal' : 'sendDM',
+                        contentType: 'image',
+                        content: fileData
+                    };
+                    
+                    if (currentView !== 'global') {
+                        sendData.recipient = currentView;
+                    }
+                    
+                    socket.send(JSON.stringify(sendData));
+                } else {
+                    alert('Only images supported for now');
+                }
+            };
+            
+            reader.readAsDataURL(file);
+            e.target.value = ''; // Reset input
+        }
+
+        function clearMessages() {
+            document.getElementById('messagesContainer').innerHTML = '';
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('messagesContainer');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function backToMenu() {
+            window.location.href = '/';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
