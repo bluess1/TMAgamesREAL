@@ -12,7 +12,7 @@
         }
         html, body {
             height: 100%;
-            overflow: hidden; /* Lock page scroll forever */
+            overflow: hidden; /* No page scroll */
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -161,12 +161,28 @@
         .messages-container {
             flex: 1;
             overflow-y: auto;
-            padding: 20px;
+            padding: 20px 30px 20px 20px; /* Extra right padding for scrollbar space */
             display: flex;
             flex-direction: column;
             gap: 15px;
             background: #0f3460;
-            -webkit-overflow-scrolling: touch; /* Smooth on mobile */
+            -webkit-overflow-scrolling: touch;
+        }
+        /* Custom scrollbar for chat only */
+        .messages-container::-webkit-scrollbar {
+            width: 12px;
+        }
+        .messages-container::-webkit-scrollbar-track {
+            background: transparent;
+            border-radius: 6px;
+        }
+        .messages-container::-webkit-scrollbar-thumb {
+            background: rgba(102, 126, 234, 0.5); /* Purple-ish to match theme */
+            border-radius: 6px;
+            border: 3px solid #0f3460; /* Matches background for inset look */
+        }
+        .messages-container::-webkit-scrollbar-thumb:hover {
+            background: #667eea;
         }
         .message {
             max-width: 70%;
@@ -283,18 +299,9 @@
         input[type="file"] {
             display: none;
         }
+        /* Hide global scrollbar styles - only chat has custom one */
         ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #1a1a2e;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #2a3f5f;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #667eea;
+            width: 0px; /* Hide any other scrollbars */
         }
     </style>
 </head>
