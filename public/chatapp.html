@@ -10,14 +10,12 @@
             padding: 0;
             box-sizing: border-box;
         }
-        html, body {
-            height: 100%;
-            overflow: hidden; /* No page scroll */
-        }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #1a1a2e;
             color: #eee;
+            height: 100vh;
+            overflow: hidden;
         }
         #loginScreen {
             display: flex;
@@ -57,6 +55,7 @@
             cursor: pointer;
         }
         #chatScreen {
+            display: none;
             height: 100vh;
             display: grid;
             grid-template-columns: 280px 1fr;
@@ -66,13 +65,11 @@
             border-right: 1px solid #2a3f5f;
             display: flex;
             flex-direction: column;
-            height: 100%;
         }
         .sidebar-header {
             padding: 20px;
             background: #0f3460;
             border-bottom: 1px solid #2a3f5f;
-            flex-shrink: 0;
         }
         .sidebar-header h2 {
             color: #fff;
@@ -82,7 +79,6 @@
             display: flex;
             padding: 10px;
             gap: 10px;
-            flex-shrink: 0;
         }
         .tab-btn {
             flex: 1;
@@ -135,7 +131,6 @@
             display: flex;
             flex-direction: column;
             background: #0f3460;
-            height: 100%;
         }
         .chat-header {
             padding: 20px;
@@ -144,7 +139,6 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-shrink: 0;
         }
         .chat-header h3 {
             font-size: 20px;
@@ -161,40 +155,21 @@
         .messages-container {
             flex: 1;
             overflow-y: auto;
-            padding: 20px 30px 20px 20px; /* Extra right padding for scrollbar space */
+            padding: 20px;
             display: flex;
             flex-direction: column;
             gap: 15px;
-            background: #0f3460;
-            -webkit-overflow-scrolling: touch;
-        }
-        /* Custom scrollbar for chat only */
-        .messages-container::-webkit-scrollbar {
-            width: 12px;
-        }
-        .messages-container::-webkit-scrollbar-track {
-            background: transparent;
-            border-radius: 6px;
-        }
-        .messages-container::-webkit-scrollbar-thumb {
-            background: rgba(102, 126, 234, 0.5); /* Purple-ish to match theme */
-            border-radius: 6px;
-            border: 3px solid #0f3460; /* Matches background for inset look */
-        }
-        .messages-container::-webkit-scrollbar-thumb:hover {
-            background: #667eea;
         }
         .message {
             max-width: 70%;
             padding: 12px 16px;
             border-radius: 15px;
             word-wrap: break-word;
-            align-self: flex-start;
         }
         .message.own {
             align-self: flex-end;
-            background: white;
-            color: #000;
+            background: #667eea;
+            color: white;
         }
         .message.other {
             align-self: flex-start;
@@ -214,9 +189,6 @@
             margin-bottom: 4px;
             color: #aaa;
         }
-        .message.own .message-sender {
-            color: #555;
-        }
         .message-time {
             font-size: 11px;
             color: rgba(255,255,255,0.6);
@@ -224,9 +196,6 @@
         }
         .message.other .message-time {
             color: #888;
-        }
-        .message.own .message-time {
-            color: #555;
         }
         .message-file {
             display: flex;
@@ -246,7 +215,6 @@
             color: #888;
             font-style: italic;
             font-size: 14px;
-            flex-shrink: 0;
         }
         .input-area {
             padding: 20px;
@@ -255,49 +223,20 @@
             display: flex;
             gap: 10px;
             align-items: center;
-            flex-shrink: 0;
         }
-        
-        /* --- START OF EDITED/ADDED STYLES --- */
-        
-        /* New styling for the textarea element */
-        .input-area textarea#messageInput {
+        .input-area input[type="text"] {
             flex: 1;
             padding: 12px 16px;
             background: #1a1a2e;
             border: 2px solid #2a3f5f;
-            border-radius: 25px; /* Adjust border-radius for aesthetic */
+            border-radius: 25px;
             color: #eee;
             font-size: 15px;
-            resize: none; /* Prevent manual resizing by user */
-            min-height: 49px; /* Match button/file height for alignment */
-            max-height: 150px; /* Limit max height before internal scrollbar appears */
-            overflow-y: auto; /* IMPORTANT: Adds scrollbar for long text */
-            line-height: 1.4;
-            height: auto; /* Allow content to dictate initial height */
-            outline: none;
-            font-family: inherit; /* Inherit font from body */
         }
-        
-        .input-area textarea#messageInput:focus {
+        .input-area input[type="text"]:focus {
+            outline: none;
             border-color: #667eea;
         }
-        
-        /* Hiding the global scrollbar is still useful */
-        ::-webkit-scrollbar {
-            width: 0px; /* Hide any other scrollbars */
-        }
-
-        /* Re-enabling the custom scrollbar for the textarea itself */
-        .input-area textarea#messageInput::-webkit-scrollbar {
-            width: 8px; 
-        }
-        .input-area textarea#messageInput::-webkit-scrollbar-thumb {
-             background: rgba(102, 126, 234, 0.3);
-             border-radius: 4px;
-        }
-        /* --- END OF EDITED/ADDED STYLES --- */
-
         .input-area button {
             padding: 12px 24px;
             background: #667eea;
@@ -320,7 +259,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            flex-shrink: 0; /* Prevents file button from shrinking */
         }
         .file-btn:hover {
             background: #2a3f5f;
@@ -328,9 +266,23 @@
         input[type="file"] {
             display: none;
         }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1a1a2e;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2a3f5f;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #667eea;
+        }
     </style>
 </head>
 <body>
+    <!-- Login Screen -->
     <div id="loginScreen">
         <div class="login-box">
             <h1>💬 TMAChat</h1>
@@ -340,7 +292,9 @@
         </div>
     </div>
 
+    <!-- Chat Screen -->
     <div id="chatScreen" style="display: none;">
+        <!-- Sidebar -->
         <div class="sidebar">
             <div class="sidebar-header">
                 <h2>💬 TMAChat</h2>
@@ -356,6 +310,7 @@
             <div id="dmsTab" class="dm-list" style="display: none;"></div>
         </div>
 
+        <!-- Main Chat Area -->
         <div class="chat-main">
             <div class="chat-header">
                 <h3 id="chatTitle">Global Chat</h3>
@@ -369,7 +324,7 @@
             <div class="input-area">
                 <label class="file-btn" for="fileInput">📎</label>
                 <input type="file" id="fileInput" accept="image/*,video/*,.pdf,.doc,.docx,.txt">
-                <textarea id="messageInput" placeholder="Type a message..." maxlength="500"></textarea>
+                <input type="text" id="messageInput" placeholder="Type a message..." maxlength="500">
                 <button onclick="sendMessage()">Send</button>
             </div>
         </div>
@@ -399,7 +354,7 @@
             localStorage.setItem('tmaUsername', username);
             document.getElementById('currentUsername').textContent = username;
             
-            // Connect WebSocket (omitted for brevity)
+            // Connect WebSocket
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${protocol}//${window.location.host}/chatapp`;
             console.log('🔌 Connecting to:', wsUrl);
@@ -503,15 +458,18 @@
             
             let content = '';
             
-            // Always show sender username above the bubble
-            content += `<div class="message-sender">${escapeHtml(msg.sender)}</div>`;
+            if (!isOwn && view !== 'global') {
+                content += `<div class="message-sender">${msg.sender}</div>`;
+            } else if (!isOwn) {
+                content += `<div class="message-sender">${msg.sender}</div>`;
+            }
             
             if (msg.type === 'text') {
                 content += `<div>${escapeHtml(msg.content)}</div>`;
             } else if (msg.type === 'image') {
                 content += `<div class="message-file"><img src="${msg.content}" alt="Image"></div>`;
             } else if (msg.type === 'file') {
-                content += `<div class="message-file">📎 ${escapeHtml(msg.content.name)}</div>`;
+                content += `<div class="message-file">📎 ${msg.content.name}</div>`;
             }
             
             const time = new Date(msg.timestamp).toLocaleTimeString('en-US', { 
@@ -538,23 +496,21 @@
             
             if (!message || !socket || socket.readyState !== WebSocket.OPEN) return;
             
-            const sendPayload = {
-                type: 'sendGlobal',
-                content: message,
-                contentType: 'text'
-            };
-            
-            if (currentView !== 'global') {
-                sendPayload.type = 'sendDM';
-                sendPayload.recipient = currentView;
+            if (currentView === 'global') {
+                socket.send(JSON.stringify({
+                    type: 'sendGlobal',
+                    content: message
+                }));
+            } else {
+                socket.send(JSON.stringify({
+                    type: 'sendDM',
+                    recipient: currentView,
+                    content: message
+                }));
             }
-            
-            socket.send(JSON.stringify(sendPayload));
             
             input.value = '';
             stopTyping();
-            // IMPORTANT: Manually reset height for the textarea after sending
-            input.style.height = 'auto'; 
         }
 
         function switchTab(tab) {
@@ -644,20 +600,16 @@
                 withUser: withUser
             }));
         }
-        
-        // --- START OF EDITED JAVASCRIPT ---
 
         function setupInputListeners() {
             const input = document.getElementById('messageInput');
             
-            // Textarea keypress listener for sending message
             input.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) { // Send on Enter, allow Shift+Enter for new line
-                    e.preventDefault(); // Prevent default Enter action (new line)
+                if (e.key === 'Enter') {
                     sendMessage();
                 }
                 
-                // Typing indicator logic (remains the same)
+                // Send typing indicator
                 if (!isTyping) {
                     isTyping = true;
                     socket.send(JSON.stringify({
@@ -671,21 +623,9 @@
                 typingTimeout = setTimeout(stopTyping, 1000);
             });
             
-            // Auto-resize textarea on input
-            input.addEventListener('input', autoGrowTextarea);
-
             // File upload
             document.getElementById('fileInput').addEventListener('change', handleFileUpload);
         }
-
-        // Function to automatically grow the textarea height
-        function autoGrowTextarea() {
-            const textarea = document.getElementById('messageInput');
-            textarea.style.height = 'auto'; // Temporarily shrink to re-calculate scroll height
-            textarea.style.height = (textarea.scrollHeight) + 'px';
-        }
-
-        // --- END OF EDITED JAVASCRIPT ---
 
         function stopTyping() {
             if (isTyping) {
@@ -701,15 +641,10 @@
         function showTypingIndicator(user, isTyping) {
             const indicator = document.getElementById('typingIndicator');
             if (isTyping) {
-                // Only show indicator for the current chat view
-                if (currentView === 'global' || currentView === user) {
-                     indicator.textContent = `${user} is typing...`;
-                     indicator.style.display = 'block';
-                }
+                indicator.textContent = `${user} is typing...`;
+                indicator.style.display = 'block';
             } else {
-                if (indicator.textContent.startsWith(user)) {
-                    indicator.style.display = 'none';
-                }
+                indicator.style.display = 'none';
             }
         }
 
