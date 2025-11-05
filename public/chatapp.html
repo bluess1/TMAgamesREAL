@@ -59,6 +59,7 @@
             height: 100vh;
             display: grid;
             grid-template-columns: 280px 1fr;
+            overflow: hidden;
         }
         .sidebar {
             background: #16213e;
@@ -159,40 +160,56 @@
             display: flex;
             flex-direction: column;
             gap: 15px;
+            max-height: calc(100vh - 200px);
         }
         .message {
             max-width: 70%;
-            padding: 12px 16px;
-            border-radius: 15px;
-            word-wrap: break-word;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
         }
         .message.own {
             align-self: flex-end;
-            background: #667eea;
-            color: white;
         }
         .message.other {
             align-self: flex-start;
-            background: #1a1a2e;
-            color: #eee;
         }
         .message.system {
             align-self: center;
+        }
+        .message-sender {
+            font-weight: bold;
+            font-size: 13px;
+            color: #aaa;
+            padding-left: 16px;
+        }
+        .message-bubble {
+            padding: 12px 16px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            max-width: 100%;
+        }
+        .message.own .message-bubble {
+            background: #ffffff;
+            color: #1a1a2e;
+            border-bottom-right-radius: 4px;
+        }
+        .message.other .message-bubble {
+            background: #667eea;
+            color: white;
+            border-bottom-left-radius: 4px;
+        }
+        .message.system .message-bubble {
             background: transparent;
             color: #888;
             font-style: italic;
             font-size: 14px;
-        }
-        .message-sender {
-            font-weight: bold;
-            font-size: 12px;
-            margin-bottom: 4px;
-            color: #aaa;
+            text-align: center;
         }
         .message-time {
             font-size: 11px;
-            color: rgba(255,255,255,0.6);
-            margin-top: 4px;
+            color: rgba(0,0,0,0.5);
+            padding-left: 16px;
         }
         .message.other .message-time {
             color: #888;
@@ -451,43 +468,48 @@
 
         function addMessageToUI(msg, view) {
             const container = document.getElementById('messagesContainer');
-            const div = document.createElement('div');
+            const messageDiv = document.createElement('div');
             
             const isOwn = msg.sender === username;
-            div.className = `message ${isOwn ? 'own' : 'other'}`;
+            messageDiv.className = `message ${isOwn ? 'own' : 'other'}`;
             
-            let content = '';
+            let html = '';
             
-            if (!isOwn && view !== 'global') {
-                content += `<div class="message-sender">${msg.sender}</div>`;
-            } else if (!isOwn) {
-                content += `<div class="message-sender">${msg.sender}</div>`;
+            // Show sender name ABOVE bubble (except for own messages)
+            if (!isOwn) {
+                html += `<div class="message-sender">${msg.sender}</div>`;
             }
+            
+            // Message bubble
+            html += '<div class="message-bubble">';
             
             if (msg.type === 'text') {
-                content += `<div>${escapeHtml(msg.content)}</div>`;
+                html += escapeHtml(msg.content);
             } else if (msg.type === 'image') {
-                content += `<div class="message-file"><img src="${msg.content}" alt="Image"></div>`;
+                html += `<div class="message-file"><img src="${msg.content}" alt="Image"></div>`;
             } else if (msg.type === 'file') {
-                content += `<div class="message-file">📎 ${msg.content.name}</div>`;
+                html += `<div class="message-file">📎 ${msg.content.name}</div>`;
             }
             
+            html += '</div>';
+            
+            // Timestamp below bubble
             const time = new Date(msg.timestamp).toLocaleTimeString('en-US', { 
                 hour: '2-digit', 
                 minute: '2-digit' 
             });
-            content += `<div class="message-time">${time}</div>`;
+            html += `<div class="message-time">${time}</div>`;
             
-            div.innerHTML = content;
-            container.appendChild(div);
+            messageDiv.innerHTML = html;
+            container.appendChild(messageDiv);
         }
 
         function addSystemMessage(text) {
             const container = document.getElementById('messagesContainer');
-            const div = document.createElement('div');
-            div.className = 'message system';
-            div.textContent = text;
-            container.appendChild(div);
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message system';
+            messageDiv.innerHTML = `<div class="message-bubble">${escapeHtml(text)}</div>`;
+            container.appendChild(messageDiv);
         }
 
         function sendMessage() {
